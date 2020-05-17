@@ -14,16 +14,28 @@ type MetricRow struct {
 
 type MetricList struct {
 	list []MetricRow
-	mux sync.Mutex
+	mux  *sync.Mutex
+}
+
+func NewMetricsList() *MetricList {
+	m := MetricList{}
+	m.Init()
+	return &m
+}
+
+func (m *MetricList) Init() {
+	m.mux = &sync.Mutex{}
 }
 
 func (m *MetricList) append(row MetricRow) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.append(row)
+	m.list = append(m.list, row)
 }
 
-func (m *MetricList) LoadFromCache(cachetable *cache2go.CacheTable, key string) (bool) {
+func (m *MetricList) LoadFromCache(cachetable *cache2go.CacheTable, key string) bool {
+	m.Reset()
+
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
@@ -32,7 +44,7 @@ func (m *MetricList) LoadFromCache(cachetable *cache2go.CacheTable, key string) 
 		m.list = val.Data().([]MetricRow)
 		return true
 	}
-	
+
 	return false
 }
 
@@ -78,7 +90,7 @@ func (m *MetricList) Reset() {
 	m.list = []MetricRow{}
 }
 
-func (m *MetricList) GetList() ([]MetricRow) {
+func (m *MetricList) GetList() []MetricRow {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	return m.list

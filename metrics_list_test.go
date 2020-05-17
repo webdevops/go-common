@@ -16,29 +16,31 @@ func Test_MetricsList(t *testing.T) {
 func Test_MetricsListCache(t *testing.T) {
 	ttl := time.Duration(2 * time.Second)
 
-	cache := cache.New(1 * time.Minute, 1 * time.Second)
+	metricsCache := cache.New(1 * time.Minute, 1 * time.Second)
 	m := NewMetricsList()
+	m.SetCache(metricsCache)
 	metricsListGenerateMetrics(t, m)
 	expectListCount(t, m, 5)
 
-	m.StoreToCache(cache, "test", ttl)
+	m.StoreToCache("test", ttl)
 	expectListCount(t, m, 5)
 
 	// load cache into existing list
 	metricsListTestList(t, m)
-	m.LoadFromCache(cache, "test")
+	m.LoadFromCache("test")
 	expectListCount(t, m, 5)
 	metricsListTestList(t, m)
 
 	// load cache into new list
 	m2 := NewMetricsList()
+	m2.SetCache(metricsCache)
 	expectListCount(t, m2, 0)
-	m2.LoadFromCache(cache, "test")
+	m2.LoadFromCache("test")
 	expectListCount(t, m2, 5)
 	metricsListTestList(t, m2)
 
 	time.Sleep(time.Duration(1 * time.Second))
-	m2.LoadFromCache(cache, "test")
+	m2.LoadFromCache("test")
 	expectListCount(t, m2, 5)
 	metricsListTestList(t, m2)
 
@@ -46,13 +48,14 @@ func Test_MetricsListCache(t *testing.T) {
 	time.Sleep(time.Duration(1 * time.Second))
 
 	// load expired cache into existing list
-	m2.LoadFromCache(cache, "test")
+	m2.LoadFromCache("test")
 	expectListCount(t, m2, 0)
 
 	// load expired cache into new list
 	m3 := NewMetricsList()
+	m3.SetCache(metricsCache)
 	expectListCount(t, m3, 0)
-	m3.LoadFromCache(cache, "test")
+	m3.LoadFromCache("test")
 	expectListCount(t, m3, 0)
 }
 

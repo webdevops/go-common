@@ -15,6 +15,8 @@ type MetricRow struct {
 type MetricList struct {
 	list []MetricRow
 	mux  *sync.Mutex
+
+	metricsCache *cache.Cache
 }
 
 func NewMetricsList() *MetricList {
@@ -27,29 +29,37 @@ func (m *MetricList) Init() {
 	m.mux = &sync.Mutex{}
 }
 
+func (m *MetricList) SetCache(instance *cache.Cache) {
+	m.metricsCache = instance
+}
+
 func (m *MetricList) append(row MetricRow) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
 	m.list = append(m.list, row)
 }
 
-func (m *MetricList) LoadFromCache(cache *cache.Cache, key string) bool {
+func (m *MetricList) LoadFromCache(key string) bool {
 	m.Reset()
 
-	m.mux.Lock()
-	defer m.mux.Unlock()
+	if m.metricsCache != nil {
+		m.mux.Lock()
+		defer m.mux.Unlock()
 
-	if val, fetched := cache.Get(key); fetched {
-		// loaded from cache
-		m.list = val.([]MetricRow)
-		return true
+		if val, fetched := m.metricsCache.Get(key); fetched {
+			// loaded from cache
+			m.list = val.([]MetricRow)
+			return true
+		}
 	}
 
 	return false
 }
 
-func (m *MetricList) StoreToCache(cache *cache.Cache, key string, duration time.Duration) {
-	cache.Add(key, m.GetList(), duration)
+func (m *MetricList) StoreToCache(key string, duration time.Duration) {
+	if m.metricsCache != nil {
+		m.metricsCache.Add(key, m.GetList(), duration)
+	}
 }
 
 func (m *MetricList) Add(labels prometheus.Labels, value float64) {

@@ -16,7 +16,7 @@ func Test_MetricsList(t *testing.T) {
 func Test_MetricsListCache(t *testing.T) {
 	ttl := time.Duration(2 * time.Second)
 
-	metricsCache := cache.New(1 * time.Minute, 1 * time.Second)
+	metricsCache := cache.New(1*time.Minute, 1*time.Second)
 	m := NewMetricsList()
 	m.SetCache(metricsCache)
 	metricsListGenerateMetrics(t, m)

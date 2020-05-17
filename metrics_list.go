@@ -1,7 +1,7 @@
 package prometheus_common
 
 import (
-	"github.com/muesli/cache2go"
+	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 	"time"
@@ -33,23 +33,23 @@ func (m *MetricList) append(row MetricRow) {
 	m.list = append(m.list, row)
 }
 
-func (m *MetricList) LoadFromCache(cachetable *cache2go.CacheTable, key string) bool {
+func (m *MetricList) LoadFromCache(cache *cache.Cache, key string) bool {
 	m.Reset()
 
 	m.mux.Lock()
 	defer m.mux.Unlock()
 
-	if val, err := cachetable.Value(key); err == nil {
+	if val, fetched := cache.Get(key); fetched {
 		// loaded from cache
-		m.list = val.Data().([]MetricRow)
+		m.list = val.([]MetricRow)
 		return true
 	}
 
 	return false
 }
 
-func (m *MetricList) StoreToCache(cachetable *cache2go.CacheTable, key string, duration time.Duration) {
-	cachetable.Add(key, duration, m.GetList())
+func (m *MetricList) StoreToCache(cache *cache.Cache, key string, duration time.Duration) {
+	cache.Add(key, m.GetList(), duration)
 }
 
 func (m *MetricList) Add(labels prometheus.Labels, value float64) {

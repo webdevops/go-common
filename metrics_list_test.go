@@ -1,7 +1,7 @@
 package prometheus_common
 
 import (
-	"github.com/muesli/cache2go"
+	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 	"testing"
 	"time"
@@ -16,7 +16,7 @@ func Test_MetricsList(t *testing.T) {
 func Test_MetricsListCache(t *testing.T) {
 	ttl := time.Duration(2 * time.Second)
 
-	cache := cache2go.Cache("test")
+	cache := cache.New(1 * time.Minute, 1 * time.Second)
 	m := NewMetricsList()
 	metricsListGenerateMetrics(t, m)
 	expectListCount(t, m, 5)
@@ -37,7 +37,12 @@ func Test_MetricsListCache(t *testing.T) {
 	expectListCount(t, m2, 5)
 	metricsListTestList(t, m2)
 
-	time.Sleep(ttl)
+	time.Sleep(time.Duration(1 * time.Second))
+	m2.LoadFromCache(cache, "test")
+	expectListCount(t, m2, 5)
+	metricsListTestList(t, m2)
+
+	time.Sleep(time.Duration(1 * time.Second))
 	time.Sleep(time.Duration(1 * time.Second))
 
 	// load expired cache into existing list

@@ -70,6 +70,12 @@ func (m *MetricList) AddInfo(labels prometheus.Labels) {
 	m.append(MetricRow{labels: labels, value: 1})
 }
 
+func (m *MetricList) AddIfNotNil(labels prometheus.Labels, value *float64) {
+	if value != nil {
+		m.append(MetricRow{labels: labels, value: *value})
+	}
+}
+
 func (m *MetricList) AddIfNotZero(labels prometheus.Labels, value float64) {
 	if value != 0 {
 		m.append(MetricRow{labels: labels, value: value})
@@ -92,6 +98,15 @@ func (m *MetricList) AddTime(labels prometheus.Labels, value time.Time) {
 
 func (m *MetricList) AddDuration(labels prometheus.Labels, value time.Duration) {
 	m.append(MetricRow{labels: labels, value: value.Seconds()})
+}
+
+func (m *MetricList) AddBool(labels prometheus.Labels, state bool) {
+	value := float64(0)
+	if state {
+		value = 1
+	}
+
+	m.append(MetricRow{labels: labels, value: value})
 }
 
 func (m *MetricList) Reset() {

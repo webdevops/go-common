@@ -101,6 +101,8 @@ func metricsListTestList(t *testing.T, m *MetricList) {
 }
 
 func expectListCount(t *testing.T, m *MetricList, expectedCount int) {
+	t.Helper()
+
 	list := m.GetList()
 
 	itemCount := len(list)
@@ -110,6 +112,8 @@ func expectListCount(t *testing.T, m *MetricList, expectedCount int) {
 }
 
 func expectMetricRowLabel(t *testing.T, m MetricRow, expectedLabel, expectedValue string) {
+	t.Helper()
+
 	for label, value := range m.labels {
 		if label == expectedLabel && value == expectedValue {
 			return
@@ -120,6 +124,8 @@ func expectMetricRowLabel(t *testing.T, m MetricRow, expectedLabel, expectedValu
 }
 
 func expectMetricRowValue(t *testing.T, m MetricRow, expectedValue float64) {
+	t.Helper()
+
 	if m.value != expectedValue {
 		t.Errorf("Expected metric value: %v  Actual metric value: %v", expectedValue, m.value)
 	}

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 )
+
 type HashedMetricList struct {
 	list map[string]*MetricRow
 	mux  *sync.Mutex
@@ -53,7 +54,6 @@ func (m *HashedMetricList) StoreToCache(key string, duration time.Duration) {
 	}
 }
 
-
 func (m *HashedMetricList) Reset() {
 	m.mux.Lock()
 	defer m.mux.Unlock()
@@ -78,7 +78,7 @@ func (m *HashedMetricList) Inc(labels prometheus.Labels) {
 
 	metricKey := ""
 	for key, value := range labels {
-		metricKey = metricKey + key + "=" + value +";"
+		metricKey = metricKey + key + "=" + value + ";"
 	}
 	hashKey := fmt.Sprintf("%x", sha256.Sum256([]byte(metricKey)))
 	if _, exists := m.list[hashKey]; exists {
@@ -86,7 +86,7 @@ func (m *HashedMetricList) Inc(labels prometheus.Labels) {
 	} else {
 		m.list[hashKey] = &MetricRow{
 			labels: labels,
-			value: 1,
+			value:  1,
 		}
 	}
 }

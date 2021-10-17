@@ -127,6 +127,18 @@ func (m *MetricList) GaugeSet(gauge *prometheus.GaugeVec) {
 	}
 }
 
+func (m *MetricList) SummarySet(summary *prometheus.SummaryVec) {
+	for _, metric := range m.GetList() {
+		summary.With(metric.labels).Observe(metric.value)
+	}
+}
+
+func (m *MetricList) HistogramSet(histogram *prometheus.HistogramVec) {
+	for _, metric := range m.GetList() {
+		histogram.With(metric.labels).Observe(metric.value)
+	}
+}
+
 func (m *MetricList) CounterAdd(counter *prometheus.CounterVec) {
 	for _, metric := range m.GetList() {
 		counter.With(metric.labels).Add(metric.value)

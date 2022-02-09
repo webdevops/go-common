@@ -26,7 +26,7 @@ func Enable() {
 		prometheus.HistogramOpts{
 			Name:    "azurerm_api_request",
 			Help:    "AzureRM API requests",
-			Buckets: prometheus.DefBuckets,
+			Buckets: []float64{.01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30, 60},
 		},
 		[]string{"statusCode"},
 	)

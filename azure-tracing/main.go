@@ -24,7 +24,7 @@ var (
 func Enable() {
 	azureApiMetric = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "azurerm_api_requests",
+			Name:    "azurerm_api_request",
 			Help:    "AzureRM API requests",
 			Buckets: prometheus.DefBuckets,
 		},

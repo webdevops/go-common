@@ -34,6 +34,7 @@ func init() {
 		[]string{
 			"endpoint",
 			"routingRegion",
+			"subscriptionID",
 			"method",
 			"statusCode",
 		},
@@ -101,10 +102,11 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			// collect request and latency
 			if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
 				azureApiRequest.With(prometheus.Labels{
-					"endpoint":      hostname,
-					"routingRegion": strings.ToLower(routingRegion),
-					"method":        strings.ToLower(r.Request.Method),
-					"statusCode":    strconv.FormatInt(int64(r.StatusCode), 10),
+					"endpoint":       hostname,
+					"routingRegion":  strings.ToLower(routingRegion),
+					"subscriptionID": subscriptionId,
+					"method":         strings.ToLower(r.Request.Method),
+					"statusCode":     strconv.FormatInt(int64(r.StatusCode), 10),
 				}).Observe(time.Since(startTime).Seconds())
 			}
 

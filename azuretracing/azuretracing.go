@@ -78,11 +78,14 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 
 	client.ResponseInspector = func(p autorest.Responder) autorest.Responder {
 		return autorest.ResponderFunc(func(r *http.Response) error {
+			// get hostname (shorten it to 3 parts)
 			hostname := strings.ToLower(r.Request.URL.Hostname())
-			path := r.Request.URL.Path
 			if hostnameParts := strings.Split(hostname, "."); len(hostnameParts) > hostnameMaxParts {
 				hostname = strings.Join(hostnameParts[len(hostnameParts)-hostnameMaxParts:], ".")
 			}
+
+			// path with trimmed / at start (could be multiple)
+			path := "/" + strings.TrimLeft(r.Request.URL.Path, "/")
 
 			// try to detect subscriptionId from url
 			subscriptionId := ""
@@ -123,7 +126,7 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			}
 
 			// special resourcegraph limits
-			if strings.HasPrefix(r.Request.URL.Path, "/providers/Microsoft.ResourceGraph/") {
+			if strings.HasPrefix(strings.ToLower(path), "/providers/microsoft.resourcegraph/") {
 				collectAzureApiRateLimitMetric(r, "x-ms-user-quota-remaining", "resourcegraph", "quota")
 			}
 

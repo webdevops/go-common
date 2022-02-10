@@ -120,6 +120,11 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 				}
 			}
 
+			// special resourcegraph limits
+			if strings.HasPrefix(r.Request.URL.Path, "/providers/Microsoft.ResourceGraph/") {
+				collectAzureApiRateLimitMetric(r, "x-ms-user-quota-remaining", "resourcegraph", "quota")
+			}
+
 			// subscription rate limits
 			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-reads", "subscription", "reads")
 			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-resource-requests", "subscription", "resource-requests")

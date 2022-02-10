@@ -14,6 +14,7 @@ import (
 
 const (
 	contextTracingName = "webdevops:prom:tracing"
+	hostnameMaxParts   = 3
 )
 
 var (
@@ -32,6 +33,7 @@ func init() {
 		},
 		[]string{
 			"endpoint",
+			"routingRegion",
 			"method",
 			"statusCode",
 		},
@@ -61,13 +63,6 @@ func RegisterAzureMetricAutoClean(handler http.Handler) http.Handler {
 }
 
 func DecoreAzureAutoRest(client *autorest.Client) {
-	collectAzureApiRateLimitMetric := func(r *http.Response, headerName string, labels prometheus.Labels) {
-		ratelimit := r.Header.Get(headerName)
-		if v, err := strconv.ParseInt(ratelimit, 10, 64); err == nil {
-			azureApiRatelimit.With(labels).Set(float64(v))
-		}
-	}
-
 	client.RequestInspector = func(p autorest.Preparer) autorest.Preparer {
 		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
 			r, err := p.Prepare(r)
@@ -84,6 +79,9 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 		return autorest.ResponderFunc(func(r *http.Response) error {
 			hostname := strings.ToLower(r.Request.URL.Hostname())
 			path := r.Request.URL.Path
+			if hostnameParts := strings.Split(hostname, "."); len(hostnameParts) > hostnameMaxParts {
+				hostname = strings.Join(hostnameParts[len(hostnameParts)-hostnameMaxParts:], ".")
+			}
 
 			// try to detect subscriptionId from url
 			subscriptionId := ""
@@ -91,24 +89,47 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 				subscriptionId = strings.ToLower(matches[1])
 			}
 
+			routingRegion := ""
+			if headerValue := r.Header.Get("x-ms-routing-request-id"); headerValue != "" {
+				if headerValueParts := strings.Split(headerValue, ":"); len(headerValueParts) >= 1 {
+					routingRegion = headerValueParts[0]
+				}
+			} else if headerValue := r.Header.Get("x-ms-keyvault-region"); headerValue != "" {
+				routingRegion = headerValue
+			}
+
 			// collect request and latency
 			if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
 				azureApiRequest.With(prometheus.Labels{
-					"endpoint":   hostname,
-					"method":     strings.ToLower(r.Request.Method),
-					"statusCode": strconv.FormatInt(int64(r.StatusCode), 10),
+					"endpoint":      hostname,
+					"routingRegion": strings.ToLower(routingRegion),
+					"method":        strings.ToLower(r.Request.Method),
+					"statusCode":    strconv.FormatInt(int64(r.StatusCode), 10),
 				}).Observe(time.Since(startTime).Seconds())
 			}
 
+			collectAzureApiRateLimitMetric := func(r *http.Response, headerName string, scopeLabel, typeLabel string) {
+				ratelimit := r.Header.Get(headerName)
+				if v, err := strconv.ParseInt(ratelimit, 10, 64); err == nil {
+					azureApiRatelimit.With(prometheus.Labels{
+						"endpoint":       hostname,
+						"subscriptionID": subscriptionId,
+						"scope":          scopeLabel,
+						"type":           typeLabel,
+					}).Set(float64(v))
+				}
+			}
+
 			// subscription rate limits
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-reads", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "subscription", "type": "read"})
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-resource-requests", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "subscription", "type": "resource-requests"})
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-resource-entities-read", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "subscription", "type": "resource-entities-read"})
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-reads", "subscription", "reads")
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-resource-requests", "subscription", "resource-requests")
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-subscription-resource-entities-read", "subscription", "resource-entities-read")
 
 			// tenant rate limits
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-reads", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "tenant", "type": "read"})
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-requests", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "tenant", "type": "resource-requests"})
-			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-entities-read", prometheus.Labels{"endpoint": hostname, "subscriptionID": subscriptionId, "scope": "tenant", "type": "resource-entities-read"})
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-reads", "tenant", "reads")
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-requests", "tenant", "resource-requests")
+			collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-entities-read", "tenant", "resource-entities-read")
+
 			return nil
 		})
 	}

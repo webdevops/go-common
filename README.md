@@ -16,4 +16,4 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 | `METRIC_AZURERM_API_REQUEST_BUCKETS`     | `1, 2.5, 5, 10, 30, 60, 90, 120` | Sets buckets for `azurerm_api_request` histogram metric  |
 | `METRIC_AZURERM_API_REQUEST_DISABLE`     | `false`                          | Disables `azurerm_api_request_*` metric                  |
 | `METRIC_AZURERM_API_RATELIMIT_DISABLE`   | `false`                          | Disables `azurerm_api_ratelimit` metric                  |
-| `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                        | Disables `azurerm_api_ratelimit` autoreset after fetch   |
+| `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                          | Disables `azurerm_api_ratelimit` autoreset after fetch   |

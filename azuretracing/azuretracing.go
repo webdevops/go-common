@@ -39,6 +39,7 @@ func init() {
 	if envVal := os.Getenv(envVarApiRequestBuckets); envVal != "" {
 		azureApiRequestBuckets = []float64{}
 		for _, bucketString := range strings.Split(envVal, ",") {
+			bucketString = strings.TrimSpace(bucketString)
 			if val, err := strconv.ParseFloat(bucketString, 64); err == nil {
 				azureApiRequestBuckets = append(azureApiRequestBuckets, val)
 			} else {

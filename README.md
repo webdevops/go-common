@@ -6,10 +6,10 @@
 Azuretracing metrics collects latency and latency from azure-sdk-for-go and creates metrics and is controllable using
 environment variables (eg. setting buckets, disabling metrics or disable autoreset).
 
-| Metric                                   | Description                                                                                     |
-|------------------------------------------|-------------------------------------------------------------------------------------------------|
-| `azurerm_api_ratelimit`                  | Azure ratelimit metrics (only on /metrics, resets after query)                                  |
-| `azurerm_api_request_*`                  | Azure request count and latency as histogram                                                    |
+| Metric                                   | Description                                                                            |
+|------------------------------------------|----------------------------------------------------------------------------------------|
+| `azurerm_api_ratelimit`                  | Azure ratelimit metrics (only on /metrics, resets after query due to limited validity) |
+| `azurerm_api_request_*`                  | Azure request count and latency as histogram                                           |
 
 | Environment variable                     | Example                          | Description                                              |
 |------------------------------------------|----------------------------------|----------------------------------------------------------|

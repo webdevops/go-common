@@ -22,6 +22,7 @@ var (
 	azureApiRatelimit *prometheus.GaugeVec
 
 	subscriptionRegexp = regexp.MustCompile(`^/subscriptions/([^/]+)/?.*$`)
+	providerRegexp     = regexp.MustCompile(`^/subscriptions/[^/]+/resourcegroups/[^/]+/providers/([^/]+/[^/]+)/.*$`)
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 			"endpoint",
 			"routingRegion",
 			"subscriptionID",
+			"resourceProvider",
 			"method",
 			"statusCode",
 		},
@@ -85,12 +87,18 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			}
 
 			// path with trimmed / at start (could be multiple)
-			path := "/" + strings.TrimLeft(r.Request.URL.Path, "/")
+			path := strings.ToLower("/" + strings.TrimLeft(r.Request.URL.Path, "/"))
 
 			// try to detect subscriptionId from url
 			subscriptionId := ""
 			if matches := subscriptionRegexp.FindStringSubmatch(path); len(matches) >= 2 {
 				subscriptionId = strings.ToLower(matches[1])
+			}
+
+			// try to detect subscriptionId from url
+			provider := ""
+			if matches := providerRegexp.FindStringSubmatch(path); len(matches) >= 2 {
+				provider = strings.ToLower(matches[1])
 			}
 
 			routingRegion := ""
@@ -105,11 +113,12 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			// collect request and latency
 			if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
 				azureApiRequest.With(prometheus.Labels{
-					"endpoint":       hostname,
-					"routingRegion":  strings.ToLower(routingRegion),
-					"subscriptionID": subscriptionId,
-					"method":         strings.ToLower(r.Request.Method),
-					"statusCode":     strconv.FormatInt(int64(r.StatusCode), 10),
+					"endpoint":         hostname,
+					"routingRegion":    strings.ToLower(routingRegion),
+					"subscriptionID":   subscriptionId,
+					"resourceProvider": provider,
+					"method":           strings.ToLower(r.Request.Method),
+					"statusCode":       strconv.FormatInt(int64(r.StatusCode), 10),
 				}).Observe(time.Since(startTime).Seconds())
 			}
 
@@ -126,7 +135,7 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			}
 
 			// special resourcegraph limits
-			if strings.HasPrefix(strings.ToLower(path), "/providers/microsoft.resourcegraph/") {
+			if strings.HasPrefix(path, "/providers/microsoft.resourcegraph/") {
 				collectAzureApiRateLimitMetric(r, "x-ms-user-quota-remaining", "resourcegraph", "quota")
 			}
 

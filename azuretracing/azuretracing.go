@@ -30,7 +30,7 @@ func init() {
 		prometheus.HistogramOpts{
 			Name:    "azurerm_api_request",
 			Help:    "AzureRM API requests",
-			Buckets: []float64{.1, .25, .5, 1, 2.5, 5, 10, 30, 60},
+			Buckets: []float64{1, 2.5, 5, 10, 30, 60, 90, 120},
 		},
 		[]string{
 			"endpoint",

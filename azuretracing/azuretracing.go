@@ -20,59 +20,121 @@ const (
 
 	envVarApiRequestBuckets     = "METRIC_AZURERM_API_REQUEST_BUCKETS"
 	envVarApiRequestEnabled     = "METRIC_AZURERM_API_REQUEST_ENABLE"
+	envVarApiRequestLables      = "METRIC_AZURERM_API_REQUEST_LABELS"
 	envVarApiRatelimitEnabled   = "METRIC_AZURERM_API_RATELIMIT_ENABLE"
 	envVarApiRatelimitAutoreset = "METRIC_AZURERM_API_RATELIMIT_AUTORESET"
 )
 
+type (
+	azureTracing struct {
+		settings struct {
+			azureApiRequest struct {
+				enabled bool
+				buckets []float64
+
+				labels struct {
+					endpoint         bool
+					routingRegion    bool
+					subscriptionID   bool
+					resourceProvider bool
+					method           bool
+					statusCode       bool
+				}
+			}
+
+			azureApiRatelimit struct {
+				enabled   bool
+				autoreset bool
+			}
+		}
+
+		prometheus struct {
+			azureApiRequest   *prometheus.HistogramVec
+			azureApiRatelimit *prometheus.GaugeVec
+		}
+	}
+)
+
 var (
-	azureApiRequest   *prometheus.HistogramVec
-	azureApiRatelimit *prometheus.GaugeVec
+	AzureTracing *azureTracing
 
-	azureApiRatelimitAutoReset = true
-
+	envVarSplit        = regexp.MustCompile(`([\s,]+)`)
 	subscriptionRegexp = regexp.MustCompile(`^/subscriptions/([^/]+)/?.*$`)
 	providerRegexp     = regexp.MustCompile(`^/subscriptions/[^/]+/resourcegroups/[^/]+/providers/([^/]+/[^/]+)/.*$`)
 )
 
 func init() {
-	azureApiRequestBuckets := []float64{1, 2.5, 5, 10, 30, 60, 90, 120}
+	AzureTracing = &azureTracing{}
+
+	// azureApiRequest settings
+	AzureTracing.settings.azureApiRequest.enabled = checkIfEnvVarIsEnabled(envVarApiRequestEnabled, true)
+	AzureTracing.settings.azureApiRequest.labels.endpoint = checkIfEnvVarContains(envVarApiRequestLables, "endpoint", true)
+	AzureTracing.settings.azureApiRequest.labels.routingRegion = checkIfEnvVarContains(envVarApiRequestLables, "routingRegion", true)
+	AzureTracing.settings.azureApiRequest.labels.subscriptionID = checkIfEnvVarContains(envVarApiRequestLables, "subscriptionID", true)
+	AzureTracing.settings.azureApiRequest.labels.resourceProvider = checkIfEnvVarContains(envVarApiRequestLables, "resourceProvider", true)
+	AzureTracing.settings.azureApiRequest.labels.method = checkIfEnvVarContains(envVarApiRequestLables, "method", true)
+	AzureTracing.settings.azureApiRequest.labels.statusCode = checkIfEnvVarContains(envVarApiRequestLables, "statusCode", true)
+
+	AzureTracing.settings.azureApiRequest.buckets = []float64{1, 2.5, 5, 10, 30, 60, 90, 120}
 	if envVal := os.Getenv(envVarApiRequestBuckets); envVal != "" {
-		azureApiRequestBuckets = []float64{}
-		for _, bucketString := range strings.Split(envVal, ",") {
+		AzureTracing.settings.azureApiRequest.buckets = []float64{}
+		for _, bucketString := range envVarSplit.Split(envVal, -1) {
 			bucketString = strings.TrimSpace(bucketString)
 			if val, err := strconv.ParseFloat(bucketString, 64); err == nil {
-				azureApiRequestBuckets = append(azureApiRequestBuckets, val)
+				AzureTracing.settings.azureApiRequest.buckets = append(
+					AzureTracing.settings.azureApiRequest.buckets,
+					val,
+				)
 			} else {
-				panic(fmt.Sprintf("unable to parse env var %v: %v", envVarApiRequestBuckets, err))
+				panic(fmt.Sprintf("unable to parse env var %v=\"%v\": %v", envVarApiRequestBuckets, os.Getenv(envVarApiRequestBuckets), err))
 			}
 		}
 	}
 
-	enableAzureApiRequest := checkIfEnvVarIsEnabled(envVarApiRequestEnabled, true)
-	enableAzureApiRatelimit := checkIfEnvVarIsEnabled(envVarApiRatelimitEnabled, true)
-	azureApiRatelimitAutoReset = checkIfEnvVarIsEnabled(envVarApiRatelimitAutoreset, azureApiRatelimitAutoReset)
+	// azureApiRatelimit
+	AzureTracing.settings.azureApiRatelimit.enabled = checkIfEnvVarIsEnabled(envVarApiRatelimitEnabled, true)
+	AzureTracing.settings.azureApiRatelimit.autoreset = checkIfEnvVarIsEnabled(envVarApiRatelimitAutoreset, AzureTracing.settings.azureApiRatelimit.autoreset)
 
-	if enableAzureApiRequest {
-		azureApiRequest = prometheus.NewHistogramVec(
+	if AzureTracing.settings.azureApiRequest.enabled {
+		labels := []string{}
+
+		if AzureTracing.settings.azureApiRequest.labels.endpoint {
+			labels = append(labels, "endpoint")
+		}
+
+		if AzureTracing.settings.azureApiRequest.labels.routingRegion {
+			labels = append(labels, "routingRegion")
+		}
+
+		if AzureTracing.settings.azureApiRequest.labels.subscriptionID {
+			labels = append(labels, "subscriptionID")
+		}
+
+		if AzureTracing.settings.azureApiRequest.labels.resourceProvider {
+			labels = append(labels, "resourceProvider")
+		}
+
+		if AzureTracing.settings.azureApiRequest.labels.method {
+			labels = append(labels, "method")
+		}
+
+		if AzureTracing.settings.azureApiRequest.labels.statusCode {
+			labels = append(labels, "statusCode")
+		}
+
+		AzureTracing.prometheus.azureApiRequest = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    "azurerm_api_request",
 				Help:    "AzureRM API requests",
-				Buckets: azureApiRequestBuckets,
+				Buckets: AzureTracing.settings.azureApiRequest.buckets,
 			},
-			[]string{
-				"endpoint",
-				"routingRegion",
-				"subscriptionID",
-				"resourceProvider",
-				"method",
-				"statusCode",
-			},
+			labels,
 		)
-		prometheus.MustRegister(azureApiRequest)
+		prometheus.MustRegister(AzureTracing.prometheus.azureApiRequest)
 	}
 
-	if enableAzureApiRatelimit {
-		azureApiRatelimit = prometheus.NewGaugeVec(
+	if AzureTracing.settings.azureApiRatelimit.enabled {
+		AzureTracing.prometheus.azureApiRatelimit = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "azurerm_api_ratelimit",
 				Help: "AzureRM API ratelimit",
@@ -84,24 +146,24 @@ func init() {
 				"type",
 			},
 		)
-		prometheus.MustRegister(azureApiRatelimit)
+		prometheus.MustRegister(AzureTracing.prometheus.azureApiRatelimit)
 	}
 }
 
 func RegisterAzureMetricAutoClean(handler http.Handler) http.Handler {
-	if azureApiRatelimit == nil || !azureApiRatelimitAutoReset {
+	if AzureTracing.prometheus.azureApiRatelimit == nil || !AzureTracing.settings.azureApiRatelimit.autoreset {
 		// metric or autoreset disabled, nothing to do here
 		return handler
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(w, r)
-		azureApiRatelimit.Reset()
+		AzureTracing.prometheus.azureApiRatelimit.Reset()
 	})
 }
 
 func DecoreAzureAutoRest(client *autorest.Client) {
-	if azureApiRequest == nil && azureApiRatelimit == nil {
+	if AzureTracing.prometheus.azureApiRequest == nil && AzureTracing.prometheus.azureApiRatelimit == nil {
 		// all metrics disabled, nothing to do here
 		return
 	}
@@ -136,9 +198,9 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			}
 
 			// try to detect subscriptionId from url
-			provider := ""
+			resourceProvider := ""
 			if matches := providerRegexp.FindStringSubmatch(path); len(matches) >= 2 {
-				provider = strings.ToLower(matches[1])
+				resourceProvider = strings.ToLower(matches[1])
 			}
 
 			routingRegion := ""
@@ -151,24 +213,43 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			}
 
 			// collect request and latency
-			if azureApiRequest != nil {
+			if AzureTracing.prometheus.azureApiRequest != nil {
 				if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
-					azureApiRequest.With(prometheus.Labels{
-						"endpoint":         hostname,
-						"routingRegion":    strings.ToLower(routingRegion),
-						"subscriptionID":   subscriptionId,
-						"resourceProvider": provider,
-						"method":           strings.ToLower(r.Request.Method),
-						"statusCode":       strconv.FormatInt(int64(r.StatusCode), 10),
-					}).Observe(time.Since(startTime).Seconds())
+					requestLabels := prometheus.Labels{}
+
+					if AzureTracing.settings.azureApiRequest.labels.endpoint {
+						requestLabels["endpoint"] = hostname
+					}
+
+					if AzureTracing.settings.azureApiRequest.labels.routingRegion {
+						requestLabels["routingRegion"] = strings.ToLower(routingRegion)
+					}
+
+					if AzureTracing.settings.azureApiRequest.labels.subscriptionID {
+						requestLabels["subscriptionID"] = subscriptionId
+					}
+
+					if AzureTracing.settings.azureApiRequest.labels.resourceProvider {
+						requestLabels["resourceProvider"] = resourceProvider
+					}
+
+					if AzureTracing.settings.azureApiRequest.labels.method {
+						requestLabels["method"] = strings.ToLower(r.Request.Method)
+					}
+
+					if AzureTracing.settings.azureApiRequest.labels.statusCode {
+						requestLabels["statusCode"] = strconv.FormatInt(int64(r.StatusCode), 10)
+					}
+
+					AzureTracing.prometheus.azureApiRequest.With(requestLabels).Observe(time.Since(startTime).Seconds())
 				}
 			}
 
-			if azureApiRatelimit != nil {
+			if AzureTracing.prometheus.azureApiRatelimit != nil {
 				collectAzureApiRateLimitMetric := func(r *http.Response, headerName string, scopeLabel, typeLabel string) {
 					ratelimit := r.Header.Get(headerName)
 					if v, err := strconv.ParseInt(ratelimit, 10, 64); err == nil {
-						azureApiRatelimit.With(prometheus.Labels{
+						AzureTracing.prometheus.azureApiRatelimit.With(prometheus.Labels{
 							"endpoint":       hostname,
 							"subscriptionID": subscriptionId,
 							"scope":          scopeLabel,
@@ -198,6 +279,22 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 			return nil
 		})
 	}
+}
+
+func checkIfEnvVarContains(name string, value string, defaultVal bool) bool {
+	envVal := strings.TrimSpace(os.Getenv(name))
+
+	if envVal != "" {
+		for _, part := range envVarSplit.Split(envVal, -1) {
+			if strings.EqualFold(part, value) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	return defaultVal
 }
 
 func checkIfEnvVarIsEnabled(name string, defaultVal bool) bool {

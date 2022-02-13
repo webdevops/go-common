@@ -2,6 +2,8 @@ package azuretracing
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -36,6 +38,7 @@ type (
 					endpoint         bool
 					routingRegion    bool
 					subscriptionID   bool
+					tenantID         bool
 					resourceProvider bool
 					method           bool
 					statusCode       bool
@@ -52,6 +55,27 @@ type (
 			azureApiRequest   *prometheus.HistogramVec
 			azureApiRatelimit *prometheus.GaugeVec
 		}
+	}
+
+	azureJwtAuthToken struct {
+		Aud      string   `json:"aud"`
+		Iss      string   `json:"iss"`
+		Iat      int      `json:"iat"`
+		Nbf      int      `json:"nbf"`
+		Exp      int      `json:"exp"`
+		Aio      string   `json:"aio"`
+		Appid    string   `json:"appid"`
+		Appidacr string   `json:"appidacr"`
+		Groups   []string `json:"groups"`
+		Idp      string   `json:"idp"`
+		Idtyp    string   `json:"idtyp"`
+		Oid      string   `json:"oid"`
+		Rh       string   `json:"rh"`
+		Sub      string   `json:"sub"`
+		Tid      string   `json:"tid"`
+		Uti      string   `json:"uti"`
+		Ver      string   `json:"ver"`
+		XmsTcdt  int      `json:"xms_tcdt"`
 	}
 )
 
@@ -71,6 +95,7 @@ func init() {
 	AzureTracing.settings.azureApiRequest.labels.endpoint = checkIfEnvVarContains(envVarApiRequestLables, "endpoint", true)
 	AzureTracing.settings.azureApiRequest.labels.routingRegion = checkIfEnvVarContains(envVarApiRequestLables, "routingRegion", true)
 	AzureTracing.settings.azureApiRequest.labels.subscriptionID = checkIfEnvVarContains(envVarApiRequestLables, "subscriptionID", true)
+	AzureTracing.settings.azureApiRequest.labels.tenantID = checkIfEnvVarContains(envVarApiRequestLables, "tenantID", true)
 	AzureTracing.settings.azureApiRequest.labels.resourceProvider = checkIfEnvVarContains(envVarApiRequestLables, "resourceProvider", true)
 	AzureTracing.settings.azureApiRequest.labels.method = checkIfEnvVarContains(envVarApiRequestLables, "method", true)
 	AzureTracing.settings.azureApiRequest.labels.statusCode = checkIfEnvVarContains(envVarApiRequestLables, "statusCode", true)
@@ -110,6 +135,10 @@ func init() {
 			labels = append(labels, "subscriptionID")
 		}
 
+		if AzureTracing.settings.azureApiRequest.labels.tenantID {
+			labels = append(labels, "tenantID")
+		}
+
 		if AzureTracing.settings.azureApiRequest.labels.resourceProvider {
 			labels = append(labels, "resourceProvider")
 		}
@@ -142,6 +171,7 @@ func init() {
 			[]string{
 				"endpoint",
 				"subscriptionID",
+				"tenantID",
 				"scope",
 				"type",
 			},
@@ -203,6 +233,8 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 				resourceProvider = strings.ToLower(matches[1])
 			}
 
+			tenantId := extractTenantIdFromRequest(r)
+
 			routingRegion := ""
 			if headerValue := r.Header.Get("x-ms-routing-request-id"); headerValue != "" {
 				if headerValueParts := strings.Split(headerValue, ":"); len(headerValueParts) >= 1 {
@@ -229,6 +261,10 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 						requestLabels["subscriptionID"] = subscriptionId
 					}
 
+					if AzureTracing.settings.azureApiRequest.labels.tenantID {
+						requestLabels["tenantID"] = tenantId
+					}
+
 					if AzureTracing.settings.azureApiRequest.labels.resourceProvider {
 						requestLabels["resourceProvider"] = resourceProvider
 					}
@@ -252,6 +288,7 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 						AzureTracing.prometheus.azureApiRatelimit.With(prometheus.Labels{
 							"endpoint":       hostname,
 							"subscriptionID": subscriptionId,
+							"tenantID":       tenantId,
 							"scope":          scopeLabel,
 							"type":           typeLabel,
 						}).Set(float64(v))
@@ -281,6 +318,24 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 	}
 }
 
+func extractTenantIdFromRequest(r *http.Response) string {
+	authToken := r.Request.Header.Get("authorization")
+	if strings.HasPrefix(authToken, "Bearer") {
+		authToken = strings.TrimSpace(strings.TrimPrefix(authToken, "Bearer"))
+		authTokenParts := strings.Split(authToken, ".")
+		if len(authTokenParts) == 3 {
+			if val, err := base64.RawURLEncoding.DecodeString(authTokenParts[1]); err == nil {
+				jwt := azureJwtAuthToken{}
+				if err := json.Unmarshal(val, &jwt); err == nil {
+					return jwt.Tid
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
 func checkIfEnvVarContains(name string, value string, defaultVal bool) bool {
 	envVal := strings.TrimSpace(os.Getenv(name))
 
@@ -304,22 +359,10 @@ func checkIfEnvVarIsEnabled(name string, defaultVal bool) bool {
 	val = strings.ToLower(strings.TrimSpace(val))
 
 	switch val {
-	case "1":
-		fallthrough
-	case "true":
-		fallthrough
-	case "yes":
-		fallthrough
-	case "enabled":
+	case "1", "true", "y", "yes", "enabled":
 		status = true
 
-	case "0":
-		fallthrough
-	case "false":
-		fallthrough
-	case "no":
-		fallthrough
-	case "disabled":
+	case "0", "false", "n", "no", "disabled":
 		status = false
 	}
 

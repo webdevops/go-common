@@ -35,7 +35,7 @@ type (
 				buckets []float64
 
 				labels struct {
-					endpoint         bool
+					apiEndpoint      bool
 					routingRegion    bool
 					subscriptionID   bool
 					tenantID         bool
@@ -95,7 +95,7 @@ func init() {
 
 	// azureApiRequest settings
 	AzureTracing.settings.azureApiRequest.enabled = checkIfEnvVarIsEnabled(envVarApiRequestEnabled, true)
-	AzureTracing.settings.azureApiRequest.labels.endpoint = checkIfEnvVarContains(envVarApiRequestLables, "endpoint", true)
+	AzureTracing.settings.azureApiRequest.labels.apiEndpoint = checkIfEnvVarContains(envVarApiRequestLables, "apiEndpoint", true)
 	AzureTracing.settings.azureApiRequest.labels.routingRegion = checkIfEnvVarContains(envVarApiRequestLables, "routingRegion", true)
 	AzureTracing.settings.azureApiRequest.labels.subscriptionID = checkIfEnvVarContains(envVarApiRequestLables, "subscriptionID", true)
 	AzureTracing.settings.azureApiRequest.labels.tenantID = checkIfEnvVarContains(envVarApiRequestLables, "tenantID", true)
@@ -257,7 +257,7 @@ func DecorateAzureAutoRestClient(client *autorest.Client) {
 				if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
 					requestLabels := prometheus.Labels{}
 
-					if AzureTracing.settings.azureApiRequest.labels.endpoint {
+					if AzureTracing.settings.azureApiRequest.labels.apiEndpoint {
 						requestLabels["apiEndpoint"] = hostname
 					}
 

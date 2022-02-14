@@ -57,6 +57,7 @@ type (
 		}
 	}
 
+	// azure jwt auth token from header
 	azureJwtAuthToken struct {
 		Aud      string   `json:"aud"`
 		Iss      string   `json:"iss"`
@@ -82,6 +83,8 @@ type (
 var (
 	AzureTracing *azureTracing
 
+	DefBuckets = []float64{1, 2.5, 5, 10, 30, 60, 90, 120}
+
 	envVarSplit        = regexp.MustCompile(`([\s,]+)`)
 	subscriptionRegexp = regexp.MustCompile(`^/subscriptions/([^/]+)/?.*$`)
 	providerRegexp     = regexp.MustCompile(`^/subscriptions/[^/]+/resourcegroups/[^/]+/providers/([^/]+/[^/]+)/.*$`)
@@ -100,7 +103,7 @@ func init() {
 	AzureTracing.settings.azureApiRequest.labels.method = checkIfEnvVarContains(envVarApiRequestLables, "method", true)
 	AzureTracing.settings.azureApiRequest.labels.statusCode = checkIfEnvVarContains(envVarApiRequestLables, "statusCode", true)
 
-	AzureTracing.settings.azureApiRequest.buckets = []float64{1, 2.5, 5, 10, 30, 60, 90, 120}
+	AzureTracing.settings.azureApiRequest.buckets = DefBuckets
 	if envVal := os.Getenv(envVarApiRequestBuckets); envVal != "" {
 		AzureTracing.settings.azureApiRequest.buckets = []float64{}
 		for _, bucketString := range envVarSplit.Split(envVal, -1) {
@@ -192,7 +195,12 @@ func RegisterAzureMetricAutoClean(handler http.Handler) http.Handler {
 	})
 }
 
+// Deprecated: typo
 func DecoreAzureAutoRest(client *autorest.Client) {
+	DecorateAzureAutoRestClient(client)
+}
+
+func DecorateAzureAutoRestClient(client *autorest.Client) {
 	if AzureTracing.prometheus.azureApiRequest == nil && AzureTracing.prometheus.azureApiRatelimit == nil {
 		// all metrics disabled, nothing to do here
 		return

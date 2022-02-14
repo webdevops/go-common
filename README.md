@@ -18,7 +18,7 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 | `METRIC_AZURERM_API_REQUEST_ENABLE`      | `false`                          | Enables/disables `azurerm_api_request_*` metric                |
 | `METRIC_AZURERM_API_REQUEST_LABELS`      | `endpoint, method, statusCode`   | Controls labels of `azurerm_api_request_*` metric              |
 | `METRIC_AZURERM_API_RATELIMIT_ENABLE`    | `false`                          | Enables/disables `azurerm_api_ratelimit` metric                |
-| `METRIC_AZURERM_API_RATELIMIT_ENABLE`    | `false`                          | Enables/disables `azurerm_api_ratelimit` autoreset after fetch |
+| `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                          | Enables/disables `azurerm_api_ratelimit` autoreset after fetch |
 
 
 | `azurerm_api_request` label | Status             | Description                                                                                              |

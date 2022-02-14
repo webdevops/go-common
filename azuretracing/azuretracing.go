@@ -124,7 +124,7 @@ func init() {
 		labels := []string{}
 
 		if AzureTracing.settings.azureApiRequest.labels.endpoint {
-			labels = append(labels, "endpoint")
+			labels = append(labels, "apiEndpoint")
 		}
 
 		if AzureTracing.settings.azureApiRequest.labels.routingRegion {
@@ -169,7 +169,7 @@ func init() {
 				Help: "AzureRM API ratelimit",
 			},
 			[]string{
-				"endpoint",
+				"apiEndpoint",
 				"subscriptionID",
 				"tenantID",
 				"scope",
@@ -250,7 +250,7 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 					requestLabels := prometheus.Labels{}
 
 					if AzureTracing.settings.azureApiRequest.labels.endpoint {
-						requestLabels["endpoint"] = hostname
+						requestLabels["apiEndpoint"] = hostname
 					}
 
 					if AzureTracing.settings.azureApiRequest.labels.routingRegion {
@@ -286,7 +286,7 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 					ratelimit := r.Header.Get(headerName)
 					if v, err := strconv.ParseInt(ratelimit, 10, 64); err == nil {
 						AzureTracing.prometheus.azureApiRatelimit.With(prometheus.Labels{
-							"endpoint":       hostname,
+							"apiEndpoint":    hostname,
 							"subscriptionID": subscriptionId,
 							"tenantID":       tenantId,
 							"scope":          scopeLabel,

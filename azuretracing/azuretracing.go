@@ -118,7 +118,7 @@ func init() {
 
 	// azureApiRatelimit
 	AzureTracing.settings.azureApiRatelimit.enabled = checkIfEnvVarIsEnabled(envVarApiRatelimitEnabled, true)
-	AzureTracing.settings.azureApiRatelimit.autoreset = checkIfEnvVarIsEnabled(envVarApiRatelimitAutoreset, AzureTracing.settings.azureApiRatelimit.autoreset)
+	AzureTracing.settings.azureApiRatelimit.autoreset = checkIfEnvVarIsEnabled(envVarApiRatelimitAutoreset, true)
 
 	if AzureTracing.settings.azureApiRequest.enabled {
 		labels := []string{}

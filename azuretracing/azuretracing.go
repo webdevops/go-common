@@ -126,7 +126,7 @@ func init() {
 	if AzureTracing.settings.azureApiRequest.enabled {
 		labels := []string{}
 
-		if AzureTracing.settings.azureApiRequest.labels.endpoint {
+		if AzureTracing.settings.azureApiRequest.labels.apiEndpoint {
 			labels = append(labels, "apiEndpoint")
 		}
 

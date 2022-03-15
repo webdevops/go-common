@@ -15,7 +15,7 @@ type (
 		OriginalResourceId        string
 		Subscription              string
 		ResourceGroup             string
-		ResourceProvider          string
+		ResourceProviderName      string
 		ResourceProviderNamespace string
 		ResourceType              string
 		ResourceName              string
@@ -23,51 +23,75 @@ type (
 	}
 )
 
-func (info *AzureResourceDetails) ResourceId() (resourceId string) {
-	if info.Subscription != "" {
-		resourceId += fmt.Sprintf("/subscriptions/%s", info.Subscription)
+func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
+	if resource.Subscription != "" {
+		resourceId += fmt.Sprintf(
+			"/subscriptions/%s",
+			resource.Subscription,
+		)
 	} else {
 		return
 	}
 
-	if info.ResourceGroup != "" {
-		resourceId += fmt.Sprintf("/resourceGroups/%s", info.ResourceGroup)
+	if resource.ResourceGroup != "" {
+		resourceId += fmt.Sprintf(
+			"/resourceGroups/%s",
+			resource.ResourceGroup,
+		)
 	}
 
-	if info.ResourceProvider != "" && info.ResourceProviderNamespace != "" && info.ResourceName != "" {
-		resourceId += fmt.Sprintf("/providers/%s/%s/%s", info.ResourceProvider, info.ResourceProviderNamespace, info.ResourceName)
+	if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" && resource.ResourceName != "" {
+		resourceId += fmt.Sprintf(
+			"/providers/%s/%s/%s",
+			resource.ResourceProviderName,
+			resource.ResourceProviderNamespace,
+			resource.ResourceName,
+		)
 
-		if info.ResourceSubPath != "" {
-			resourceId += fmt.Sprintf("/%s", info.ResourceSubPath)
+		if resource.ResourceSubPath != "" {
+			resourceId += fmt.Sprintf(
+				"/%s",
+				resource.ResourceSubPath,
+			)
 		}
 	}
 
 	return
 }
 
-func ParseResourceId(resourceId string) (info *AzureResourceDetails, err error) {
-	info = &AzureResourceDetails{}
+func ParseResourceId(resourceId string) (resource *AzureResourceDetails, err error) {
+	resource = &AzureResourceDetails{}
 
 	if matches := resourceIdRegExp.FindStringSubmatch(resourceId); len(matches) >= 1 {
-		info.OriginalResourceId = resourceId
+		resource.OriginalResourceId = resourceId
 		for i, name := range resourceIdRegExp.SubexpNames() {
 			if i != 0 && name != "" {
 				switch name {
 				case "subscription":
-					info.Subscription = strings.ToLower(matches[i])
+					resource.Subscription = strings.ToLower(matches[i])
 				case "resourceGroup":
-					info.ResourceGroup = strings.ToLower(matches[i])
+					resource.ResourceGroup = strings.ToLower(matches[i])
 				case "resourceProvider":
-					info.ResourceProvider = strings.ToLower(matches[i])
+					resource.ResourceProviderName = strings.ToLower(matches[i])
 				case "resourceProviderNamespace":
-					info.ResourceProviderNamespace = strings.ToLower(matches[i])
+					resource.ResourceProviderNamespace = strings.ToLower(matches[i])
 				case "resourceName":
-					info.ResourceName = strings.ToLower(matches[i])
+					resource.ResourceName = strings.ToLower(matches[i])
 				case "resourceSubPath":
-					info.ResourceSubPath = strings.Trim(matches[i], "/")
+					resource.ResourceSubPath = strings.Trim(matches[i], "/")
 				}
 			}
 		}
+
+		// build resourcetype
+		if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" {
+			resource.ResourceType = fmt.Sprintf(
+				"%s/%s",
+				resource.ResourceProviderName,
+				resource.ResourceProviderNamespace,
+			)
+		}
+
 	} else {
 		err = fmt.Errorf("unable to parse Azure resourceID \"%v\"", resourceId)
 	}

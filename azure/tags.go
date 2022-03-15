@@ -55,11 +55,11 @@ func applyTagValueSettings(val string, settings string) string {
 	ret := val
 	settingQuery, _ := url.ParseQuery(settings)
 
-	if settingQuery.Has("toLower") {
+	if settingQuery.Has("toLower") || settingQuery.Has("tolower") {
 		ret = strings.ToLower(ret)
 	}
 
-	if settingQuery.Has("toUpper") {
+	if settingQuery.Has("toUpper") || settingQuery.Has("toupper") {
 		ret = strings.ToUpper(ret)
 	}
 

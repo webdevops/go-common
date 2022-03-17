@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	resourceIdRegExp = regexp.MustCompile(`(?i)/subscriptions/(?P<subscription>[^/]+)(/resourceGroups/(?P<resourceGroup>[^/]+))?(/providers/(?P<resourceProvider>[^/]*)/(?P<resourceProviderNamespace>[^/]*)/(?P<resourceName>[^/]+)(/(?P<resourceSubPath>.+))?)?`)
+	resourceIdRegExp = regexp.MustCompile(`(?i)^/subscriptions/(?P<subscription>[^/]+)(/resourceGroups/(?P<resourceGroup>[^/]+))?(/providers/(?P<resourceProvider>[^/]+)/(?P<resourceProviderNamespace>[^/]+)/(?P<resourceName>[^/]+)(/(?P<resourceSubPath>.+))?)?/?$`)
 )
 
 type (
@@ -65,20 +65,21 @@ func ParseResourceId(resourceId string) (resource *AzureResourceDetails, err err
 	if matches := resourceIdRegExp.FindStringSubmatch(resourceId); len(matches) >= 1 {
 		resource.OriginalResourceId = resourceId
 		for i, name := range resourceIdRegExp.SubexpNames() {
+			v := strings.TrimSpace(matches[i])
 			if i != 0 && name != "" {
 				switch name {
 				case "subscription":
-					resource.Subscription = strings.ToLower(matches[i])
+					resource.Subscription = strings.ToLower(v)
 				case "resourceGroup":
-					resource.ResourceGroup = strings.ToLower(matches[i])
+					resource.ResourceGroup = strings.ToLower(v)
 				case "resourceProvider":
-					resource.ResourceProviderName = strings.ToLower(matches[i])
+					resource.ResourceProviderName = strings.ToLower(v)
 				case "resourceProviderNamespace":
-					resource.ResourceProviderNamespace = strings.ToLower(matches[i])
+					resource.ResourceProviderNamespace = strings.ToLower(v)
 				case "resourceName":
-					resource.ResourceName = strings.ToLower(matches[i])
+					resource.ResourceName = strings.ToLower(v)
 				case "resourceSubPath":
-					resource.ResourceSubPath = strings.Trim(matches[i], "/")
+					resource.ResourceSubPath = strings.Trim(v, "/")
 				}
 			}
 		}

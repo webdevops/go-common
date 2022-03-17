@@ -27,6 +27,22 @@ func Test_ParseResourceId(t *testing.T) {
 	}
 }
 
+func Test_ParseResourceIdErrors(t *testing.T) {
+	resourceIds := []string{
+		"",
+		" /subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318 ",
+		" /subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318",
+		//"/subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318 ",
+		"//subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318//",
+		" /subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318/resourceGroups/foo-rg",
+		//"/subscriptions/d7b0cf13-ddf7-43ea-81f1-6f659767a318 /resourceGroups/foo?-rg",
+	}
+
+	for _, resourceId := range resourceIds {
+		assertInvalidResourceId(t, resourceId)
+	}
+}
+
 func assertResourceId(t *testing.T, expect string, val string) {
 	t.Helper()
 
@@ -40,4 +56,12 @@ func assertResourceId(t *testing.T, expect string, val string) {
 		t.Errorf("unable to parse resourceid \"%v\": %v", val, err)
 	}
 
+}
+
+func assertInvalidResourceId(t *testing.T, val string) {
+	t.Helper()
+	if info, err := ParseResourceId(val); err == nil {
+		infoJson, _ := json.Marshal(info)
+		t.Errorf("assumed invalid resourceid but was parsed successfull \"%s\": %s", val, infoJson)
+	}
 }

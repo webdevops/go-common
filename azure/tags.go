@@ -1,7 +1,6 @@
 package azure
 
 import (
-	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -15,6 +14,10 @@ var (
 )
 
 func AddResourceTagsToPrometheusLabels(labels prometheus.Labels, resourceTags interface{}, tags []string) prometheus.Labels {
+	return AddResourceTagsToPrometheusLabelsWithCustomPrefix(labels, resourceTags, tags, "tag_")
+}
+
+func AddResourceTagsToPrometheusLabelsWithCustomPrefix(labels prometheus.Labels, resourceTags interface{}, tags []string, labelPrefix string) prometheus.Labels {
 	resourceTagMap := map[string]string{}
 
 	switch v := resourceTags.(type) {
@@ -37,7 +40,7 @@ func AddResourceTagsToPrometheusLabels(labels prometheus.Labels, resourceTags in
 		}
 
 		tag = strings.ToLower(tag)
-		tagLabel := fmt.Sprintf("tag_" + azureTagNameToPrometheusNameRegExp.ReplaceAllLiteralString(tag, "_"))
+		tagLabel := labelPrefix + azureTagNameToPrometheusNameRegExp.ReplaceAllLiteralString(tag, "_")
 		labels[tagLabel] = ""
 
 		if val, exists := resourceTagMap[tag]; exists {

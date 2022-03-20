@@ -9,12 +9,29 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	AzurePrometheusLabelPrefix = "tag_"
+)
+
 var (
 	azureTagNameToPrometheusNameRegExp = regexp.MustCompile("[^_a-zA-Z0-9]")
 )
 
+func AddResourceTagsToPrometheusLabelsDefinition(labels, tags []string) []string {
+	return AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags, AzurePrometheusLabelPrefix)
+}
+
+func AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags []string, labelPrefix string) []string {
+	for _, val := range tags {
+		tagName := labelPrefix + val
+		labels = append(labels, tagName)
+	}
+
+	return labels
+}
+
 func AddResourceTagsToPrometheusLabels(labels prometheus.Labels, resourceTags interface{}, tags []string) prometheus.Labels {
-	return AddResourceTagsToPrometheusLabelsWithCustomPrefix(labels, resourceTags, tags, "tag_")
+	return AddResourceTagsToPrometheusLabelsWithCustomPrefix(labels, resourceTags, tags, AzurePrometheusLabelPrefix)
 }
 
 func AddResourceTagsToPrometheusLabelsWithCustomPrefix(labels prometheus.Labels, resourceTags interface{}, tags []string, labelPrefix string) prometheus.Labels {

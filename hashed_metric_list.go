@@ -49,10 +49,12 @@ func (m *HashedMetricList) LoadFromCache(key string) bool {
 	return false
 }
 
-func (m *HashedMetricList) StoreToCache(key string, duration time.Duration) {
+func (m *HashedMetricList) StoreToCache(key string, duration time.Duration) error {
 	if m.metricsCache != nil {
-		m.metricsCache.Add(key, m.GetList(), duration)
+		return m.metricsCache.Add(key, m.GetList(), duration)
 	}
+
+	return nil
 }
 
 func (m *HashedMetricList) Reset() {

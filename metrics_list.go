@@ -57,10 +57,11 @@ func (m *MetricList) LoadFromCache(key string) bool {
 	return false
 }
 
-func (m *MetricList) StoreToCache(key string, duration time.Duration) {
+func (m *MetricList) StoreToCache(key string, duration time.Duration) error {
 	if m.metricsCache != nil {
-		m.metricsCache.Add(key, m.GetList(), duration)
+		return m.metricsCache.Add(key, m.GetList(), duration)
 	}
+	return nil
 }
 
 func (m *MetricList) Add(labels prometheus.Labels, value float64) {

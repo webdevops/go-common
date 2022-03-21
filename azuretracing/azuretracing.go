@@ -211,7 +211,7 @@ func DecorateAzureAutoRestClient(client *autorest.Client) {
 			r, err := p.Prepare(r)
 			if err == nil {
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, contextTracingName, time.Now().UTC())
+				ctx = context.WithValue(ctx, contextTracingName, time.Now().UTC()) // nolint:staticcheck
 				r = r.WithContext(ctx)
 			}
 			return r, err

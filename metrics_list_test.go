@@ -23,7 +23,9 @@ func Test_MetricsListCache(t *testing.T) {
 	metricsListGenerateMetrics(t, m)
 	expectListCount(t, m, 5)
 
-	m.StoreToCache("test", ttl)
+	if err := m.StoreToCache("test", ttl); err != nil {
+		t.Errorf(err.Error())
+	}
 	expectListCount(t, m, 5)
 
 	// load cache into existing list

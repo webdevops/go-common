@@ -1,8 +1,9 @@
 package prometheus_common
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func Test_HashedMetricsList(t *testing.T) {

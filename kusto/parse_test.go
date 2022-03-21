@@ -2,9 +2,10 @@ package kusto
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 type (

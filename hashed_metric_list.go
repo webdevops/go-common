@@ -3,10 +3,11 @@ package prometheus_common
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/patrickmn/go-cache"
-	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type HashedMetricList struct {

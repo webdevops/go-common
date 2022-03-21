@@ -1,10 +1,11 @@
 package prometheus_common
 
 import (
-	"github.com/patrickmn/go-cache"
-	"github.com/prometheus/client_golang/prometheus"
 	"testing"
 	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func Test_MetricsList(t *testing.T) {

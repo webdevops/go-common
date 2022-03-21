@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -321,7 +320,6 @@ func NewConfig(path string) (config Config) {
 
 	config = Config{}
 
-	log.Infof("reading configuration from file %v", path)
 	/*  #nosec G304 */
 	if data, err := ioutil.ReadFile(path); err == nil {
 		filecontent = data
@@ -329,7 +327,6 @@ func NewConfig(path string) (config Config) {
 		panic(err)
 	}
 
-	log.Info("parsing configuration")
 	if err := yaml.Unmarshal(filecontent, &config); err != nil {
 		panic(err)
 	}

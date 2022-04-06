@@ -1,4 +1,4 @@
-package prometheus_common
+package prometheus
 
 import (
 	"time"

@@ -1,10 +1,9 @@
-package prometheus_common
+package prometheus
 
 import (
 	"testing"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

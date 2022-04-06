@@ -1,4 +1,4 @@
-package prometheus_common
+package prometheus
 
 import (
 	"crypto/sha256"
@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

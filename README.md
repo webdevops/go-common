@@ -1,4 +1,4 @@
-# Library for common prometheus tasks
+# Go Common library for webdevops projects
 
 ## AzureTracing metrics
 
@@ -25,8 +25,8 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 |-----------------------------|--------------------|----------------------------------------------------------------------------------------------------------|
 | `apiEndpoint`               | enabled by default | hostname of endpoint (max 3 parts)                                                                       |
 | `routingRegion`             | enabled by default | detected region for API call, either routing region from Azure Management API or Azure resource location |
-| `subscriptionID`            | enabled by default | detected subscriptionID                                                                                  | 
-| `tenantID`                  | enabled by default | detected tenantID (extracted from jwt auth token)                                                        | 
+| `subscriptionID`            | enabled by default | detected subscriptionID                                                                                  |
+| `tenantID`                  | enabled by default | detected tenantID (extracted from jwt auth token)                                                        |
 | `resourceProvider`          | enabled by default | detected Azure Management API provider                                                                   |
 | `method`                    | enabled by default | HTTP method                                                                                              |
 | `statusCode`                | enabled by default | HTTP status code                                                                                         |
@@ -63,8 +63,8 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 |-----------------------------|--------------------|----------------------------------------------------------------------------------------------------------|
 | `apiEndpoint`               | enabled by default | hostname of endpoint (max 3 parts)                                                                       |
 | `routingRegion`             | enabled by default | detected region for API call, either routing region from Azure Management API or Azure resource location |
-| `subscriptionID`            | enabled by default | detected subscriptionID                                                                                  | 
-| `tenantID`                  | enabled by default | detected tenantID (extracted from jwt auth token)                                                        | 
+| `subscriptionID`            | enabled by default | detected subscriptionID                                                                                  |
+| `tenantID`                  | enabled by default | detected tenantID (extracted from jwt auth token)                                                        |
 | `resourceProvider`          | enabled by default | detected Azure Management API provider                                                                   |
 | `method`                    | enabled by default | HTTP method                                                                                              |
 | `statusCode`                | enabled by default | HTTP status code                                                                                         |
@@ -76,7 +76,7 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 
 Tag can be dynamically added to metrics and processed though filters
 
-format is: `tagname?filter1` or `tagname?filter1&filter2` 
+format is: `tagname?filter1` or `tagname?filter1&filter2`
 
 | Tag filter | Description                 |
 |------------|-----------------------------|

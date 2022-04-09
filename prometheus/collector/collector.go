@@ -28,7 +28,7 @@ type Collector struct {
 
 func New(name string, processor Processor, logger *zap.Logger) *Collector {
 	c := &Collector{}
-	c.context = context.Background()
+	c.Context = context.Background()
 	c.Name = name
 	c.processor = processor
 	if logger != nil {

@@ -60,7 +60,7 @@ func (i *IteratorSubscriptions) ForEachAsync(callback func(subscription subscrip
 
 func (i *IteratorSubscriptions) listSubscriptions() ([]subscriptions.Subscription, error) {
 	var list []subscriptions.Subscription
-	
+
 	if i.subscriptions != nil {
 		list = *i.subscriptions
 	} else {

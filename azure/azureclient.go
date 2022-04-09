@@ -63,7 +63,11 @@ func (azureClient *Client) SetCacheTtl(ttl time.Duration) {
 }
 
 func (azureClient *Client) DecorateAzureAutorest(client *autorest.Client) {
-	client.Authorizer = azureClient.Authorizer
+	azureClient.DecorateAzureAutorestWithAuthorizer(client, azureClient.Authorizer)
+}
+
+func (azureClient *Client) DecorateAzureAutorestWithAuthorizer(client *autorest.Client, authorizer autorest.Authorizer) {
+	client.Authorizer = authorizer
 	if azureClient.userAgent != "" {
 		if err := client.AddToUserAgent(azureClient.userAgent); err != nil {
 			panic(err)

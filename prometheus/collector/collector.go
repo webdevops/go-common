@@ -91,6 +91,7 @@ func (c *Collector) collect() {
 
 	go func() {
 		c.processor.Collect(callbackChannel)
+		c.WaitGroup.Wait()
 		close(callbackChannel)
 	}()
 

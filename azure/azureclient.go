@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	cache "github.com/patrickmn/go-cache"
 
@@ -17,8 +18,8 @@ import (
 
 type (
 	Client struct {
-		environment azure.Environment
-		authorizer  autorest.Authorizer
+		Environment azure.Environment
+		Authorizer  autorest.Authorizer
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
@@ -29,13 +30,28 @@ type (
 
 func NewClient(environment azure.Environment, authorizer autorest.Authorizer) *Client {
 	azureClient := &Client{}
-	azureClient.environment = environment
-	azureClient.authorizer = authorizer
-	azureClient.cacheTtl = 30 * time.Minute
+	azureClient.Environment = environment
+	azureClient.Authorizer = authorizer
 
+	azureClient.cacheTtl = 30 * time.Minute
 	azureClient.cache = cache.New(60*time.Minute, 60*time.Second)
 
 	return azureClient
+}
+
+func NewClientFromEnvironment(environmentName string) (*Client, error) {
+	// azure authorizer
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+
+	environment, err := azure.EnvironmentFromName(environmentName)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewClient(environment, authorizer), nil
 }
 
 func (azureClient *Client) SetUserAgent(useragent string) {
@@ -46,8 +62,8 @@ func (azureClient *Client) SetCacheTtl(ttl time.Duration) {
 	azureClient.cacheTtl = ttl
 }
 
-func (azureClient *Client) decorateAzureAutorest(client *autorest.Client) {
-	client.Authorizer = azureClient.authorizer
+func (azureClient *Client) DecorateAzureAutorest(client *autorest.Client) {
+	client.Authorizer = azureClient.Authorizer
 	if azureClient.userAgent != "" {
 		if err := client.AddToUserAgent(azureClient.userAgent); err != nil {
 			panic(err)
@@ -76,8 +92,8 @@ func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) (*map[st
 }
 
 func (azureClient *Client) ListSubscriptions(ctx context.Context) (*map[string]subscriptions.Subscription, error) {
-	client := subscriptions.NewClientWithBaseURI(azureClient.environment.ResourceManagerEndpoint)
-	azureClient.decorateAzureAutorest(&client.Client)
+	client := subscriptions.NewClientWithBaseURI(azureClient.Environment.ResourceManagerEndpoint)
+	azureClient.DecorateAzureAutorest(&client.Client)
 
 	result, err := client.ListComplete(ctx)
 	if err != nil {
@@ -118,8 +134,8 @@ func (azureClient *Client) ListCachedResourceGroups(ctx context.Context, subscri
 }
 
 func (azureClient *Client) ListResourceGroups(ctx context.Context, subscription subscriptions.Subscription) (*map[string]resources.Group, error) {
-	client := resources.NewGroupsClientWithBaseURI(azureClient.environment.ResourceManagerEndpoint, *subscription.SubscriptionID)
-	azureClient.decorateAzureAutorest(&client.Client)
+	client := resources.NewGroupsClientWithBaseURI(azureClient.Environment.ResourceManagerEndpoint, *subscription.SubscriptionID)
+	azureClient.DecorateAzureAutorest(&client.Client)
 
 	result, err := client.ListComplete(ctx, "", nil)
 	if err != nil {

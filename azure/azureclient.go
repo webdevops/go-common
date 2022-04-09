@@ -73,10 +73,10 @@ func (azureClient *Client) DecorateAzureAutorest(client *autorest.Client) {
 	azuretracing.DecorateAzureAutoRestClient(client)
 }
 
-func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) (*map[string]subscriptions.Subscription, error) {
+func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) (*[]subscriptions.Subscription, error) {
 	cacheKey := "subscriptions"
 	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cacheData, ok := v.(*map[string]subscriptions.Subscription); ok {
+		if cacheData, ok := v.(*[]subscriptions.Subscription); ok {
 			return cacheData, nil
 		}
 	}
@@ -91,7 +91,7 @@ func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) (*map[st
 	return list, nil
 }
 
-func (azureClient *Client) ListSubscriptions(ctx context.Context) (*map[string]subscriptions.Subscription, error) {
+func (azureClient *Client) ListSubscriptions(ctx context.Context) (*[]subscriptions.Subscription, error) {
 	client := subscriptions.NewClientWithBaseURI(azureClient.Environment.ResourceManagerEndpoint)
 	azureClient.DecorateAzureAutorest(&client.Client)
 
@@ -100,13 +100,10 @@ func (azureClient *Client) ListSubscriptions(ctx context.Context) (*map[string]s
 		return nil, err
 	}
 
-	list := map[string]subscriptions.Subscription{}
+	list := []subscriptions.Subscription{}
 	for result.NotDone() {
 		row := result.Value()
-
-		subscriptionId := strings.ToLower(to.String(row.SubscriptionID))
-		list[subscriptionId] = row
-
+		list = append(list, row)
 		if result.NextWithContext(ctx) != nil {
 			break
 		}

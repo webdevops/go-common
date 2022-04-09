@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/remeh/sizedwaitgroup"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
@@ -21,6 +22,9 @@ type Collector struct {
 	LastScrapeDuration  *time.Duration
 	collectionStartTime time.Time
 
+	Concurrency int
+	WaitGroup   *sizedwaitgroup.SizedWaitGroup
+
 	Logger *zap.SugaredLogger
 
 	processor Processor
@@ -31,10 +35,10 @@ func New(name string, processor Processor, logger *zap.Logger) *Collector {
 	c.Context = context.Background()
 	c.Name = name
 	c.processor = processor
+	c.Concurrency = -1
 	if logger != nil {
 		c.Logger = logger.Sugar().With(zap.String("collector", name))
 	}
-
 	processor.Setup(c)
 
 	addCollectorToList(c)
@@ -55,7 +59,16 @@ func (c *Collector) SetContext(ctx context.Context) {
 	c.Context = ctx
 }
 
+func (c *Collector) SetConcurrency(concurrency int) {
+	c.Concurrency = concurrency
+}
+
 func (c *Collector) Start() error {
+	if c.WaitGroup == nil {
+		wg := sizedwaitgroup.New(c.Concurrency)
+		c.WaitGroup = &wg
+	}
+
 	if c.scrapeTime != nil {
 		// scrape time execution
 		go func() {

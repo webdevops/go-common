@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 
+	"github.com/remeh/sizedwaitgroup"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,9 +24,13 @@ func (p *Processor) Setup(collector *Collector) {
 }
 
 func (p *Processor) Logger() *log.Entry {
-	return p.Collector.Logger
+	return p.Collector.logger
 }
 
 func (p *Processor) Context() context.Context {
-	return p.Collector.Context
+	return p.Collector.context
+}
+
+func (p *Processor) WaitGroup() *sizedwaitgroup.SizedWaitGroup {
+	return p.Collector.waitGroup
 }

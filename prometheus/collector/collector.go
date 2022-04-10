@@ -12,32 +12,32 @@ import (
 type Collector struct {
 	Name string
 
-	Context context.Context
+	context context.Context
 
 	scrapeTime *time.Duration
 	cronSpec   *string
 
 	cron *cron.Cron
 
-	LastScrapeDuration  *time.Duration
+	lastScrapeDuration  *time.Duration
 	collectionStartTime time.Time
 
 	Concurrency int
-	WaitGroup   *sizedwaitgroup.SizedWaitGroup
+	waitGroup   *sizedwaitgroup.SizedWaitGroup
 
-	Logger *log.Entry
+	logger *log.Entry
 
 	processor ProcessorInterface
 }
 
 func New(name string, processor ProcessorInterface, logger *log.Logger) *Collector {
 	c := &Collector{}
-	c.Context = context.Background()
+	c.context = context.Background()
 	c.Name = name
 	c.processor = processor
 	c.Concurrency = -1
 	if logger != nil {
-		c.Logger = logger.WithFields(log.Fields{
+		c.logger = logger.WithFields(log.Fields{
 			"collector": name,
 		})
 	}
@@ -58,17 +58,21 @@ func (c *Collector) SetScapeTime(scrapeTime time.Duration) {
 }
 
 func (c *Collector) SetContext(ctx context.Context) {
-	c.Context = ctx
+	c.context = ctx
 }
 
 func (c *Collector) SetConcurrency(concurrency int) {
 	c.Concurrency = concurrency
 }
 
+func (c *Collector) GetLastScrapeDuration() *time.Duration {
+	return c.lastScrapeDuration
+}
+
 func (c *Collector) Start() error {
-	if c.WaitGroup == nil {
+	if c.waitGroup == nil {
 		wg := sizedwaitgroup.New(c.Concurrency)
-		c.WaitGroup = &wg
+		c.waitGroup = &wg
 	}
 
 	if c.scrapeTime != nil {
@@ -93,7 +97,7 @@ func (c *Collector) collect() {
 
 	go func() {
 		c.processor.Collect(callbackChannel)
-		c.WaitGroup.Wait()
+		c.waitGroup.Wait()
 		close(callbackChannel)
 	}()
 
@@ -116,16 +120,16 @@ func (c *Collector) collect() {
 func (c *Collector) collectionStart() {
 	c.collectionStartTime = time.Now()
 
-	if c.Logger != nil {
-		c.Logger.Info("starting metrics collection")
+	if c.logger != nil {
+		c.logger.Info("starting metrics collection")
 	}
 }
 
 func (c *Collector) collectionFinish() {
 	duration := time.Since(c.collectionStartTime)
-	c.LastScrapeDuration = &duration
+	c.lastScrapeDuration = &duration
 
-	if c.Logger != nil {
-		c.Logger.WithField("duration", c.LastScrapeDuration.Seconds()).Info("finished metrics collection")
+	if c.logger != nil {
+		c.logger.WithField("duration", c.lastScrapeDuration.Seconds()).Info("finished metrics collection")
 	}
 }

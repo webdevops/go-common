@@ -20,6 +20,10 @@ func (i *InterfaceIterator) SetList(list ...interface{}) {
 	i.list = list
 }
 
+func (i *InterfaceIterator) GetList() []interface{} {
+	return i.list
+}
+
 func (i *InterfaceIterator) ForEach(callback func(object interface{})) error {
 	for _, subscription := range i.list {
 		callback(subscription)

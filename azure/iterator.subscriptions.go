@@ -42,7 +42,7 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *Subs
 }
 
 func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
-	subscriptionList, err := i.listSubscriptions()
+	subscriptionList, err := i.ListSubscriptions()
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscri
 func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
 	wg := sync.WaitGroup{}
 
-	subscriptionList, err := i.listSubscriptions()
+	subscriptionList, err := i.ListSubscriptions()
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 	return nil
 }
 
-func (i *SubscriptionsIterator) listSubscriptions() ([]subscriptions.Subscription, error) {
+func (i *SubscriptionsIterator) ListSubscriptions() ([]subscriptions.Subscription, error) {
 	var list []subscriptions.Subscription
 
 	if i.subscriptions != nil {

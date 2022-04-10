@@ -27,10 +27,10 @@ type Collector struct {
 
 	Logger *log.Entry
 
-	processor Processor
+	processor ProcessorInterface
 }
 
-func New(name string, processor Processor, logger *log.Logger) *Collector {
+func New(name string, processor ProcessorInterface, logger *log.Logger) *Collector {
 	c := &Collector{}
 	c.Context = context.Background()
 	c.Name = name

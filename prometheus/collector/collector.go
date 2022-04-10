@@ -20,6 +20,7 @@ type Collector struct {
 	cron *cron.Cron
 
 	lastScrapeDuration  *time.Duration
+	lastScrapeTime      *time.Time
 	collectionStartTime time.Time
 
 	Concurrency int
@@ -67,6 +68,9 @@ func (c *Collector) SetConcurrency(concurrency int) {
 
 func (c *Collector) GetLastScrapeDuration() *time.Duration {
 	return c.lastScrapeDuration
+}
+func (c *Collector) GetLastScapeTime() *time.Time {
+	return c.lastScrapeTime
 }
 
 func (c *Collector) Start() error {
@@ -126,6 +130,7 @@ func (c *Collector) collectionStart() {
 }
 
 func (c *Collector) collectionFinish() {
+	c.lastScrapeTime = &c.collectionStartTime
 	duration := time.Since(c.collectionStartTime)
 	c.lastScrapeDuration = &duration
 

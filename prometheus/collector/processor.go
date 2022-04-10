@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"time"
 
 	"github.com/remeh/sizedwaitgroup"
 	log "github.com/sirupsen/logrus"
@@ -33,4 +34,8 @@ func (p *Processor) Context() context.Context {
 
 func (p *Processor) WaitGroup() *sizedwaitgroup.SizedWaitGroup {
 	return p.Collector.waitGroup
+}
+
+func (p *Processor) GetLastScapeTime() *time.Time {
+	return p.Collector.GetLastScapeTime()
 }

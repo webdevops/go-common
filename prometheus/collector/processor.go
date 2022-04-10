@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,4 +24,8 @@ func (p *Processor) Setup(collector *Collector) {
 
 func (p *Processor) Logger() *log.Entry {
 	return p.Collector.Logger
+}
+
+func (p *Processor) Context() context.Context {
+	return p.Collector.Context
 }

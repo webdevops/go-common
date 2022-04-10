@@ -8,23 +8,38 @@ import (
 )
 
 type (
-	IteratorSubscriptions struct {
+	SubscriptionsIterator struct {
 		client        *Client
 		subscriptions *[]subscriptions.Subscription
 	}
 )
 
-func NewIteratorSubscriptions(client *Client) *IteratorSubscriptions {
-	iterator := IteratorSubscriptions{}
+func NewSubscriptionIterator(client *Client, subscriptionID ...string) *SubscriptionsIterator {
+	iterator := SubscriptionsIterator{}
 	iterator.client = client
+	if len(subscriptionID) >= 0 {
+		iterator.SetSubscriptions(subscriptionID...)
+	}
 	return &iterator
 }
 
-func (i *IteratorSubscriptions) SetFixedSubscriptions(subscriptionList []subscriptions.Subscription) {
+func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) {
+	subscriptionsClient := subscriptions.NewClientWithBaseURI(i.client.Environment.ResourceManagerEndpoint)
+	i.client.DecorateAzureAutorest(&subscriptionsClient.Client)
+
+	subscriptionList := []subscriptions.Subscription{}
+	for _, subscriptionID := range subscriptionID {
+		subscription, err := subscriptionsClient.Get(context.Background(), subscriptionID)
+		if err != nil {
+			panic(err)
+		}
+		subscriptionList = append(subscriptionList, subscription)
+	}
+
 	i.subscriptions = &subscriptionList
 }
 
-func (i *IteratorSubscriptions) ForEach(callback func(subscription subscriptions.Subscription)) error {
+func (i *SubscriptionsIterator) ForEach(callback func(subscription subscriptions.Subscription)) error {
 	subscriptionList, err := i.listSubscriptions()
 	if err != nil {
 		return err
@@ -37,7 +52,7 @@ func (i *IteratorSubscriptions) ForEach(callback func(subscription subscriptions
 	return nil
 }
 
-func (i *IteratorSubscriptions) ForEachAsync(callback func(subscription subscriptions.Subscription)) error {
+func (i *SubscriptionsIterator) ForEachAsync(callback func(subscription subscriptions.Subscription)) error {
 	wg := sync.WaitGroup{}
 
 	subscriptionList, err := i.listSubscriptions()
@@ -58,7 +73,7 @@ func (i *IteratorSubscriptions) ForEachAsync(callback func(subscription subscrip
 	return nil
 }
 
-func (i *IteratorSubscriptions) listSubscriptions() ([]subscriptions.Subscription, error) {
+func (i *SubscriptionsIterator) listSubscriptions() ([]subscriptions.Subscription, error) {
 	var list []subscriptions.Subscription
 
 	if i.subscriptions != nil {

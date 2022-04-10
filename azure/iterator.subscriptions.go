@@ -2,9 +2,9 @@ package azure
 
 import (
 	"context"
-	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
+	"github.com/remeh/sizedwaitgroup"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -12,16 +12,19 @@ type (
 	SubscriptionsIterator struct {
 		client        *Client
 		subscriptions *[]subscriptions.Subscription
+
+		concurrency int
 	}
 )
 
 func NewSubscriptionIterator(client *Client, subscriptionID ...string) *SubscriptionsIterator {
-	iterator := SubscriptionsIterator{}
-	iterator.client = client
+	i := SubscriptionsIterator{}
+	i.client = client
+	i.concurrency = IteratorDefaultConcurrency
 	if len(subscriptionID) >= 1 {
-		iterator.SetSubscriptions(subscriptionID...)
+		i.SetSubscriptions(subscriptionID...)
 	}
-	return &iterator
+	return &i
 }
 
 func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *SubscriptionsIterator {
@@ -38,6 +41,11 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *Subs
 	}
 
 	i.subscriptions = &subscriptionList
+	return i
+}
+
+func (i *SubscriptionsIterator) SetConcurrency(concurrency int) *SubscriptionsIterator {
+	i.concurrency = concurrency
 	return i
 }
 
@@ -59,7 +67,7 @@ func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscri
 }
 
 func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
-	wg := sync.WaitGroup{}
+	wg := sizedwaitgroup.New(i.concurrency)
 
 	subscriptionList, err := i.ListSubscriptions()
 	if err != nil {
@@ -67,7 +75,7 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 	}
 
 	for _, subscription := range subscriptionList {
-		wg.Add(1)
+		wg.Add()
 
 		go func(subscription subscriptions.Subscription) {
 			defer wg.Done()

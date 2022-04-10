@@ -17,13 +17,13 @@ type (
 func NewSubscriptionIterator(client *Client, subscriptionID ...string) *SubscriptionsIterator {
 	iterator := SubscriptionsIterator{}
 	iterator.client = client
-	if len(subscriptionID) >= 0 {
+	if len(subscriptionID) >= 1 {
 		iterator.SetSubscriptions(subscriptionID...)
 	}
 	return &iterator
 }
 
-func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) {
+func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *SubscriptionsIterator {
 	subscriptionsClient := subscriptions.NewClientWithBaseURI(i.client.Environment.ResourceManagerEndpoint)
 	i.client.DecorateAzureAutorest(&subscriptionsClient.Client)
 
@@ -37,6 +37,7 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) {
 	}
 
 	i.subscriptions = &subscriptionList
+	return i
 }
 
 func (i *SubscriptionsIterator) ForEach(callback func(subscription subscriptions.Subscription)) error {

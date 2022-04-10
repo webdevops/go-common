@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
+	log "github.com/sirupsen/logrus"
 )
 
 type (
@@ -40,20 +41,24 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *Subs
 	return i
 }
 
-func (i *SubscriptionsIterator) ForEach(callback func(subscription subscriptions.Subscription)) error {
+func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
 	subscriptionList, err := i.listSubscriptions()
 	if err != nil {
 		return err
 	}
 
 	for _, subscription := range subscriptionList {
-		callback(subscription)
+		contextLogger := logger.WithFields(log.Fields{
+			"subscriptionID":   *subscription.SubscriptionID,
+			"subscriptionName": *subscription.DisplayName,
+		})
+		callback(subscription, contextLogger)
 	}
 
 	return nil
 }
 
-func (i *SubscriptionsIterator) ForEachAsync(callback func(subscription subscriptions.Subscription)) error {
+func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
 	wg := sync.WaitGroup{}
 
 	subscriptionList, err := i.listSubscriptions()
@@ -66,7 +71,11 @@ func (i *SubscriptionsIterator) ForEachAsync(callback func(subscription subscrip
 
 		go func(subscription subscriptions.Subscription) {
 			defer wg.Done()
-			callback(subscription)
+			contextLogger := logger.WithFields(log.Fields{
+				"subscriptionID":   *subscription.SubscriptionID,
+				"subscriptionName": *subscription.DisplayName,
+			})
+			callback(subscription, contextLogger)
 		}(subscription)
 	}
 

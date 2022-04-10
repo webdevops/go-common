@@ -80,8 +80,8 @@ func (i *SubscriptionsIterator) listSubscriptions() ([]subscriptions.Subscriptio
 	if i.subscriptions != nil {
 		list = *i.subscriptions
 	} else {
-		if result, err := i.client.ListCachedSubscriptions(context.Background()); err != nil {
-			list = *result
+		if result, err := i.client.ListCachedSubscriptions(context.Background()); err == nil {
+			list = result
 		} else {
 			return list, err
 		}

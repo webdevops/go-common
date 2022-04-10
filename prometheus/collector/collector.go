@@ -6,7 +6,7 @@ import (
 
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/robfig/cron"
-	"go.uber.org/zap"
+	log "github.com/sirupsen/logrus"
 )
 
 type Collector struct {
@@ -25,19 +25,21 @@ type Collector struct {
 	Concurrency int
 	WaitGroup   *sizedwaitgroup.SizedWaitGroup
 
-	Logger *zap.SugaredLogger
+	Logger *log.Entry
 
 	processor Processor
 }
 
-func New(name string, processor Processor, logger *zap.Logger) *Collector {
+func New(name string, processor Processor, logger *log.Logger) *Collector {
 	c := &Collector{}
 	c.Context = context.Background()
 	c.Name = name
 	c.processor = processor
 	c.Concurrency = -1
 	if logger != nil {
-		c.Logger = logger.Sugar().With(zap.String("collector", name))
+		c.Logger = logger.WithFields(log.Fields{
+			"collector": name,
+		})
 	}
 	processor.Setup(c)
 
@@ -124,9 +126,6 @@ func (c *Collector) collectionFinish() {
 	c.LastScrapeDuration = &duration
 
 	if c.Logger != nil {
-		c.Logger.Infow(
-			"finished metrics collection",
-			zap.Float64("duration", c.LastScrapeDuration.Seconds()),
-		)
+		c.Logger.WithField("duration", c.LastScrapeDuration.Seconds()).Info("finished metrics collection")
 	}
 }

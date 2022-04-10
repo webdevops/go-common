@@ -95,6 +95,7 @@ func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) ([]subsc
 	if err != nil {
 		return nil, err
 	}
+	azureClient.logger.Debug("found %v Azure Subscription", len(list))
 
 	azureClient.cache.Set(cacheKey, list, azureClient.cacheTtl)
 
@@ -137,6 +138,7 @@ func (azureClient *Client) ListCachedResourceGroups(ctx context.Context, subscri
 	if err != nil {
 		return list, err
 	}
+	azureClient.logger.WithField("subscriptionID", *subscription.SubscriptionID).Debug("found %v Azure ResourceGroups", len(list))
 
 	azureClient.cache.Set(cacheKey, list, azureClient.cacheTtl)
 

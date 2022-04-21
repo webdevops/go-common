@@ -2,6 +2,8 @@ package collector
 
 import (
 	"context"
+	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/remeh/sizedwaitgroup"
@@ -23,7 +25,12 @@ type Collector struct {
 	lastScrapeTime      *time.Time
 	collectionStartTime time.Time
 
-	Concurrency int
+	panic struct {
+		threshold int64
+		counter   int64
+	}
+
+	concurrency int
 	waitGroup   *sizedwaitgroup.SizedWaitGroup
 
 	logger *log.Entry
@@ -36,7 +43,9 @@ func New(name string, processor ProcessorInterface, logger *log.Logger) *Collect
 	c.context = context.Background()
 	c.Name = name
 	c.processor = processor
-	c.Concurrency = -1
+	c.concurrency = -1
+	c.panic.threshold = 5
+	c.panic.counter = 0
 	if logger != nil {
 		c.logger = logger.WithFields(log.Fields{
 			"collector": name,
@@ -47,6 +56,10 @@ func New(name string, processor ProcessorInterface, logger *log.Logger) *Collect
 	addCollectorToList(c)
 
 	return c
+}
+
+func (c *Collector) SetPanicThreshold(threshold int64) {
+	c.panic.threshold = threshold
 }
 
 func (c *Collector) SetCronSpec(cron *cron.Cron, cronSpec string) {
@@ -63,19 +76,20 @@ func (c *Collector) SetContext(ctx context.Context) {
 }
 
 func (c *Collector) SetConcurrency(concurrency int) {
-	c.Concurrency = concurrency
+	c.concurrency = concurrency
 }
 
 func (c *Collector) GetLastScrapeDuration() *time.Duration {
 	return c.lastScrapeDuration
 }
+
 func (c *Collector) GetLastScapeTime() *time.Time {
 	return c.lastScrapeTime
 }
 
 func (c *Collector) Start() error {
 	if c.waitGroup == nil {
-		wg := sizedwaitgroup.New(c.Concurrency)
+		wg := sizedwaitgroup.New(c.concurrency)
 		c.waitGroup = &wg
 	}
 
@@ -96,13 +110,38 @@ func (c *Collector) Start() error {
 
 func (c *Collector) collect() {
 	c.collectionStart()
+	panicDetected := false
 
 	callbackChannel := make(chan func())
 
 	go func() {
+		finished := false
+		defer func() {
+			close(callbackChannel)
+
+			if !finished {
+				panicDetected = true
+				atomic.AddInt64(&c.panic.counter, 1)
+				panicCounter := atomic.LoadInt64(&c.panic.counter)
+				if c.panic.threshold == -1 || panicCounter <= c.panic.threshold {
+					if err := recover(); err != nil {
+						switch v := err.(type) {
+						case *log.Entry:
+							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Message)
+						case error:
+							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Error())
+						default:
+							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v)
+						}
+
+					}
+				}
+			}
+		}()
+
 		c.processor.Collect(callbackChannel)
 		c.waitGroup.Wait()
-		close(callbackChannel)
+		finished = true
 	}()
 
 	var callbackList []func()
@@ -116,6 +155,11 @@ func (c *Collector) collect() {
 	// process callbacks (set metrics)
 	for _, callback := range callbackList {
 		callback()
+	}
+
+	if !panicDetected {
+		// reset panic counter after successful run without panics
+		atomic.StoreInt64(&c.panic.counter, 0)
 	}
 
 	c.collectionFinish()

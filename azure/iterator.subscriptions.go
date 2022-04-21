@@ -2,6 +2,10 @@ package azure
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
+	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions"
 	"github.com/remeh/sizedwaitgroup"
@@ -67,6 +71,8 @@ func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscri
 }
 
 func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(subscription subscriptions.Subscription, logger *log.Entry)) error {
+	var panicList = []string{}
+	panicLock := sync.Mutex{}
 	wg := sizedwaitgroup.New(i.concurrency)
 
 	subscriptionList, err := i.ListSubscriptions()
@@ -83,11 +89,41 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 				"subscriptionID":   *subscription.SubscriptionID,
 				"subscriptionName": *subscription.DisplayName,
 			})
+
+			finished := false
+			defer func() {
+				if !finished {
+					if err := recover(); err != nil {
+						panicLock.Lock()
+						defer panicLock.Unlock()
+
+						msg := ""
+						switch v := err.(type) {
+						case *log.Entry:
+							msg = fmt.Sprintf("panic: %s\n%s", v.Message, debug.Stack())
+						case error:
+							msg = fmt.Sprintf("panic: %s\n%s", v.Error(), debug.Stack())
+						default:
+							msg = fmt.Sprintf("panic: %s\n%s", v, debug.Stack())
+						}
+
+						contextLogger.Errorf(msg)
+						panicList = append(panicList, msg)
+					}
+				}
+			}()
+
 			callback(subscription, contextLogger)
+			finished = true
 		}(subscription)
 	}
 
 	wg.Wait()
+
+	if len(panicList) >= 1 {
+		panic("caught panics while processing SubscriptionsIterator.ForEachAsync: \n" + strings.Join(panicList, "\n-------------------------------------------------------------------------------\n"))
+	}
+
 	return nil
 }
 

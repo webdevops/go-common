@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	contextTracingName = "webdevops:prom:tracing"
+	ContextTracingName = "webdevops:prom:tracing"
 	hostnameMaxParts   = 3
 
 	envVarApiRequestBuckets     = "METRIC_AZURERM_API_REQUEST_BUCKETS"
@@ -201,6 +201,10 @@ func DecoreAzureAutoRest(client *autorest.Client) {
 }
 
 func DecorateAzureAutoRestClient(client *autorest.Client) {
+	DecorateAzureAutoRestClientWithCallbacks(client, nil, nil)
+}
+
+func DecorateAzureAutoRestClientWithCallbacks(client *autorest.Client, requestInspectorCallback *func(r *http.Request) (*http.Request, error), responseInspector *func(r *http.Response) error) {
 	if AzureTracing.prometheus.azureApiRequest == nil && AzureTracing.prometheus.azureApiRatelimit == nil {
 		// all metrics disabled, nothing to do here
 		return
@@ -211,9 +215,14 @@ func DecorateAzureAutoRestClient(client *autorest.Client) {
 			r, err := p.Prepare(r)
 			if err == nil {
 				ctx := r.Context()
-				ctx = context.WithValue(ctx, contextTracingName, time.Now().UTC()) // nolint:staticcheck
+				ctx = context.WithValue(ctx, ContextTracingName, time.Now().UTC()) // nolint:staticcheck
 				r = r.WithContext(ctx)
 			}
+
+			if requestInspectorCallback != nil {
+				return (*requestInspectorCallback)(r)
+			}
+
 			return r, err
 		})
 	}
@@ -254,7 +263,7 @@ func DecorateAzureAutoRestClient(client *autorest.Client) {
 
 			// collect request and latency
 			if AzureTracing.prometheus.azureApiRequest != nil {
-				if startTime, ok := r.Request.Context().Value(contextTracingName).(time.Time); ok {
+				if startTime, ok := r.Request.Context().Value(ContextTracingName).(time.Time); ok {
 					requestLabels := prometheus.Labels{}
 
 					if AzureTracing.settings.azureApiRequest.labels.apiEndpoint {
@@ -319,6 +328,10 @@ func DecorateAzureAutoRestClient(client *autorest.Client) {
 				collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-writes", "tenant", "writes")
 				collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-requests", "tenant", "resource-requests")
 				collectAzureApiRateLimitMetric(r, "x-ms-ratelimit-remaining-tenant-resource-entities-read", "tenant", "resource-entities-read")
+			}
+
+			if responseInspector != nil {
+				return (*responseInspector)(r)
 			}
 
 			return nil

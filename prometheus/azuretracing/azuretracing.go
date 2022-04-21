@@ -195,11 +195,6 @@ func RegisterAzureMetricAutoClean(handler http.Handler) http.Handler {
 	})
 }
 
-// Deprecated: typo
-func DecoreAzureAutoRest(client *autorest.Client) {
-	DecorateAzureAutoRestClient(client)
-}
-
 func DecorateAzureAutoRestClient(client *autorest.Client) {
 	DecorateAzureAutoRestClientWithCallbacks(client, nil, nil)
 }

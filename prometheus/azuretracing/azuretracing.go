@@ -217,10 +217,10 @@ func DecorateAzureAutoRestClientWithCallbacks(client *autorest.Client, requestIn
 				ctx := r.Context()
 				ctx = context.WithValue(ctx, ContextTracingName, time.Now().UTC()) // nolint:staticcheck
 				r = r.WithContext(ctx)
-			}
 
-			if requestInspectorCallback != nil {
-				return (*requestInspectorCallback)(r)
+				if requestInspectorCallback != nil {
+					r, err = (*requestInspectorCallback)(r)
+				}
 			}
 
 			return r, err

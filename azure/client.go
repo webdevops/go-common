@@ -2,6 +2,7 @@ package azure
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -45,10 +46,23 @@ func NewClient(environment azure.Environment, authorizer autorest.Authorizer, lo
 }
 
 func NewClientFromEnvironment(environmentName string, logger *log.Logger) (*Client, error) {
+	var (
+		authorizer autorest.Authorizer
+		err        error
+	)
+
 	// azure authorizer
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
+	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
+	case "az", "cli", "azcli":
+		authorizer, err = auth.NewAuthorizerFromCLI()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		authorizer, err = auth.NewAuthorizerFromEnvironment()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	environment, err := azure.EnvironmentFromName(environmentName)

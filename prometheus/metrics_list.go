@@ -129,6 +129,16 @@ func (m *MetricList) GaugeSet(gauge *prometheus.GaugeVec) {
 	}
 }
 
+func (m *MetricList) GaugeSetInc(gauge *prometheus.GaugeVec) {
+	for _, metric := range m.GetList() {
+		if metricGauge, err := gauge.GetMetricWith(metric.labels); err == nil {
+			metricGauge.Add(metric.value)
+		} else {
+			panic(err)
+		}
+	}
+}
+
 func (m *MetricList) SummarySet(summary *prometheus.SummaryVec) {
 	for _, metric := range m.GetList() {
 		summary.With(metric.labels).Observe(metric.value)

@@ -21,24 +21,26 @@ import (
 type (
 	Client struct {
 		Environment azure.Environment
-		Authorizer  autorest.Authorizer
 
 		logger *log.Logger
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
 
+		cacheAuthorizerTtl time.Duration
+
 		userAgent string
 	}
 )
 
-func NewClient(environment azure.Environment, authorizer autorest.Authorizer, logger *log.Logger) *Client {
+func NewClient(environment azure.Environment, logger *log.Logger) *Client {
 	azureClient := &Client{}
 	azureClient.Environment = environment
-	azureClient.Authorizer = authorizer
 
 	azureClient.cacheTtl = 30 * time.Minute
 	azureClient.cache = cache.New(60*time.Minute, 60*time.Second)
+
+	azureClient.cacheAuthorizerTtl = 15 * time.Minute
 
 	azureClient.logger = logger
 
@@ -46,31 +48,48 @@ func NewClient(environment azure.Environment, authorizer autorest.Authorizer, lo
 }
 
 func NewClientFromEnvironment(environmentName string, logger *log.Logger) (*Client, error) {
-	var (
-		authorizer autorest.Authorizer
-		err        error
-	)
-
-	// azure authorizer
-	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
-	case "az", "cli", "azcli":
-		authorizer, err = auth.NewAuthorizerFromCLI()
-		if err != nil {
-			return nil, err
-		}
-	default:
-		authorizer, err = auth.NewAuthorizerFromEnvironment()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	environment, err := azure.EnvironmentFromName(environmentName)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewClient(environment, authorizer, logger), nil
+	return NewClient(environment, logger), nil
+}
+
+func (azureClient *Client) GetAuthorizer() autorest.Authorizer {
+	return azureClient.GetAuthorizerWithResource(azureClient.Environment.ResourceManagerEndpoint)
+}
+
+func (azureClient *Client) GetAuthorizerWithResource(resource string) autorest.Authorizer {
+	cacheKey := "authorizer:" + resource
+	if v, ok := azureClient.cache.Get(cacheKey); ok {
+		if authorizer, ok := v.(autorest.Authorizer); ok {
+			return authorizer
+		}
+	}
+
+	authorizer, err := azureClient.createAuthorizer(resource)
+	if err != nil {
+		panic(err)
+	}
+
+	azureClient.cache.Set(cacheKey, authorizer, azureClient.cacheAuthorizerTtl)
+
+	return authorizer
+}
+
+func (azureClient *Client) createAuthorizer(resource string) (autorest.Authorizer, error) {
+	// azure authorizer
+	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
+	case "az", "cli", "azcli":
+		return auth.NewAuthorizerFromCLIWithResource(resource)
+	default:
+		return auth.NewAuthorizerFromEnvironmentWithResource(resource)
+	}
+}
+
+func (azureClient *Client) GetEnvironment() azure.Environment {
+	return azureClient.Environment
 }
 
 func (azureClient *Client) SetUserAgent(useragent string) {
@@ -82,7 +101,7 @@ func (azureClient *Client) SetCacheTtl(ttl time.Duration) {
 }
 
 func (azureClient *Client) DecorateAzureAutorest(client *autorest.Client) {
-	azureClient.DecorateAzureAutorestWithAuthorizer(client, azureClient.Authorizer)
+	azureClient.DecorateAzureAutorestWithAuthorizer(client, azureClient.GetAuthorizer())
 }
 
 func (azureClient *Client) DecorateAzureAutorestWithAuthorizer(client *autorest.Client, authorizer autorest.Authorizer) {

@@ -115,6 +115,29 @@ func (azureClient *Client) DecorateAzureAutorestWithAuthorizer(client *autorest.
 	azuretracing.DecorateAzureAutoRestClient(client)
 }
 
+func (azureClient *Client) ListCachedSubscriptionsWithFilter(ctx context.Context, subscriptionFilter ...string) ([]subscriptions.Subscription, error) {
+	availableSubscriptions, err := azureClient.ListCachedSubscriptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// filter subscriptions
+	if len(subscriptionFilter) > 0 {
+		var tmp []subscriptions.Subscription
+		for _, subscription := range availableSubscriptions {
+			for _, subscriptionID := range subscriptionFilter {
+				if strings.EqualFold(subscriptionID, to.String(subscription.SubscriptionID)) {
+					tmp = append(tmp, subscription)
+				}
+			}
+		}
+
+		availableSubscriptions = tmp
+	}
+
+	return availableSubscriptions, nil
+}
+
 func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) ([]subscriptions.Subscription, error) {
 	cacheKey := "subscriptions"
 	if v, ok := azureClient.cache.Get(cacheKey); ok {

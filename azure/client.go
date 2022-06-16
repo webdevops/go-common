@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources"
@@ -29,7 +30,20 @@ type (
 
 		cacheAuthorizerTtl time.Duration
 
+		subscriptionFilter []string
+
 		userAgent string
+
+		tagInheritance struct {
+			subscriptionTags  []string
+			resourceGroupTags []string
+
+			lookup struct {
+				lock              sync.RWMutex
+				subscriptionTags  map[string]map[string]string
+				resourceGroupTags map[string]map[string]map[string]string
+			}
+		}
 	}
 )
 
@@ -54,6 +68,10 @@ func NewClientFromEnvironment(environmentName string, logger *log.Logger) (*Clie
 	}
 
 	return NewClient(environment, logger), nil
+}
+
+func (azureClient *Client) SetSubscriptionFilter(subscriptionId ...string) {
+	azureClient.subscriptionFilter = subscriptionId
 }
 
 func (azureClient *Client) GetAuthorizer() autorest.Authorizer {
@@ -115,19 +133,19 @@ func (azureClient *Client) DecorateAzureAutorestWithAuthorizer(client *autorest.
 	azuretracing.DecorateAzureAutoRestClient(client)
 }
 
-func (azureClient *Client) ListCachedSubscriptionsWithFilter(ctx context.Context, subscriptionFilter ...string) ([]subscriptions.Subscription, error) {
+func (azureClient *Client) ListCachedSubscriptionsWithFilter(ctx context.Context, subscriptionID ...string) (map[string]subscriptions.Subscription, error) {
 	availableSubscriptions, err := azureClient.ListCachedSubscriptions(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// filter subscriptions
-	if len(subscriptionFilter) > 0 {
-		var tmp []subscriptions.Subscription
+	if len(subscriptionID) > 0 {
+		var tmp map[string]subscriptions.Subscription
 		for _, subscription := range availableSubscriptions {
-			for _, subscriptionID := range subscriptionFilter {
-				if strings.EqualFold(subscriptionID, to.String(subscription.SubscriptionID)) {
-					tmp = append(tmp, subscription)
+			for _, filterSubscriptionID := range subscriptionID {
+				if strings.EqualFold(filterSubscriptionID, *subscription.SubscriptionID) {
+					tmp[*subscription.SubscriptionID] = subscription
 				}
 			}
 		}
@@ -138,10 +156,10 @@ func (azureClient *Client) ListCachedSubscriptionsWithFilter(ctx context.Context
 	return availableSubscriptions, nil
 }
 
-func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) ([]subscriptions.Subscription, error) {
+func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) (map[string]subscriptions.Subscription, error) {
 	cacheKey := "subscriptions"
 	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cacheData, ok := v.([]subscriptions.Subscription); ok {
+		if cacheData, ok := v.(map[string]subscriptions.Subscription); ok {
 			return cacheData, nil
 		}
 	}
@@ -158,8 +176,8 @@ func (azureClient *Client) ListCachedSubscriptions(ctx context.Context) ([]subsc
 	return list, nil
 }
 
-func (azureClient *Client) ListSubscriptions(ctx context.Context) ([]subscriptions.Subscription, error) {
-	list := []subscriptions.Subscription{}
+func (azureClient *Client) ListSubscriptions(ctx context.Context) (map[string]subscriptions.Subscription, error) {
+	list := map[string]subscriptions.Subscription{}
 	client := subscriptions.NewClientWithBaseURI(azureClient.Environment.ResourceManagerEndpoint)
 	azureClient.DecorateAzureAutorest(&client.Client)
 
@@ -169,8 +187,20 @@ func (azureClient *Client) ListSubscriptions(ctx context.Context) ([]subscriptio
 	}
 
 	for result.NotDone() {
-		row := result.Value()
-		list = append(list, row)
+		subscription := result.Value()
+
+		if len(azureClient.subscriptionFilter) > 0 {
+			// use subscription filter
+			for _, subscriptionId := range azureClient.subscriptionFilter {
+				if strings.EqualFold(*subscription.SubscriptionID, subscriptionId) {
+					list[*subscription.SubscriptionID] = subscription
+					break
+				}
+			}
+		} else {
+			list[*subscription.SubscriptionID] = subscription
+		}
+
 		if result.NextWithContext(ctx) != nil {
 			break
 		}
@@ -224,4 +254,85 @@ func (azureClient *Client) ListResourceGroups(ctx context.Context, subscription 
 	}
 
 	return list, nil
+}
+
+func (azureClient *Client) InheritTags(resourceId string, resourceTags interface{}) map[string]string {
+	azureClient.tagInheritance.lookup.lock.RLock()
+	defer azureClient.tagInheritance.lookup.lock.RUnlock()
+
+	tags := translateTagsToStringMap(resourceTags)
+
+	resourceInfo, err := ParseResourceId(resourceId)
+	if err != nil {
+		return tags
+	}
+
+	cacheKey := "taginherit:lookup"
+	if _, ok := azureClient.cache.Get(cacheKey); !ok {
+		azureClient.updateTagInhertLookupMaps()
+		azureClient.cache.Set(cacheKey, nil, azureClient.cacheTtl)
+	}
+
+	if resourceInfo.Subscription != "" {
+		// try to inherit subscription tags
+		subscriptionId := strings.ToLower(resourceInfo.Subscription)
+		if subscriptionTags, exists := azureClient.tagInheritance.lookup.subscriptionTags[subscriptionId]; exists {
+			for _, tagName := range azureClient.tagInheritance.subscriptionTags {
+				if _, exists := tags[tagName]; !exists {
+					if tagValue, exists := subscriptionTags[tagName]; exists {
+						tags[tagName] = tagValue
+					}
+				}
+			}
+		}
+
+		// try to inherit resourcegroup tags
+		if resourceInfo.ResourceGroup != "" {
+			resourceGroupName := strings.ToLower(resourceInfo.ResourceGroup)
+			if resourceGroupTags, exists := azureClient.tagInheritance.lookup.resourceGroupTags[subscriptionId][resourceGroupName]; exists {
+				for _, tagName := range azureClient.tagInheritance.subscriptionTags {
+					if _, exists := tags[tagName]; !exists {
+						if tagValue, exists := resourceGroupTags[tagName]; exists {
+							tags[tagName] = tagValue
+						}
+					}
+				}
+			}
+		}
+	}
+	return tags
+}
+
+func (azureClient *Client) updateTagInhertLookupMaps() {
+	if !azureClient.tagInheritance.lookup.lock.TryLock() {
+		// update already running
+		return
+	}
+	defer azureClient.tagInheritance.lookup.lock.Unlock()
+
+	azureClient.logger.Debug("updating Subscription and ResourceGroup tag cache")
+
+	ctx := context.Background()
+
+	subscriptionList, err := azureClient.ListCachedSubscriptions(ctx)
+	if err != nil {
+		azureClient.logger.Panic(err)
+	}
+
+	azureClient.tagInheritance.lookup.subscriptionTags = map[string]map[string]string{}
+	azureClient.tagInheritance.lookup.resourceGroupTags = map[string]map[string]map[string]string{}
+	for _, subscription := range subscriptionList {
+		subscriptionId := to.String(subscription.SubscriptionID)
+		azureClient.tagInheritance.lookup.subscriptionTags[subscriptionId] = translateTagsToStringMap(subscription.Tags)
+
+		resourceGroupList, err := azureClient.ListCachedResourceGroups(ctx, subscription)
+		if err != nil {
+			azureClient.logger.Panic(err)
+		}
+
+		for _, resourceGroup := range resourceGroupList {
+			resourceGroupName := strings.ToLower(to.String(resourceGroup.Name))
+			azureClient.tagInheritance.lookup.resourceGroupTags[subscriptionId][resourceGroupName] = translateTagsToStringMap(resourceGroup.Tags)
+		}
+	}
 }

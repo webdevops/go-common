@@ -15,7 +15,7 @@ import (
 type (
 	SubscriptionsIterator struct {
 		client        *Client
-		subscriptions *[]subscriptions.Subscription
+		subscriptions *map[string]subscriptions.Subscription
 
 		concurrency int
 	}
@@ -35,16 +35,16 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *Subs
 	subscriptionsClient := subscriptions.NewClientWithBaseURI(i.client.Environment.ResourceManagerEndpoint)
 	i.client.DecorateAzureAutorest(&subscriptionsClient.Client)
 
-	subscriptionList := []subscriptions.Subscription{}
+	list := map[string]subscriptions.Subscription{}
 	for _, subscriptionID := range subscriptionID {
 		subscription, err := subscriptionsClient.Get(context.Background(), subscriptionID)
 		if err != nil {
 			panic(err)
 		}
-		subscriptionList = append(subscriptionList, subscription)
+		list[*subscription.SubscriptionID] = subscription
 	}
 
-	i.subscriptions = &subscriptionList
+	i.subscriptions = &list
 	return i
 }
 
@@ -127,8 +127,8 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 	return nil
 }
 
-func (i *SubscriptionsIterator) ListSubscriptions() ([]subscriptions.Subscription, error) {
-	var list []subscriptions.Subscription
+func (i *SubscriptionsIterator) ListSubscriptions() (map[string]subscriptions.Subscription, error) {
+	var list map[string]subscriptions.Subscription
 
 	if i.subscriptions != nil {
 		list = *i.subscriptions

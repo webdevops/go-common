@@ -14,7 +14,7 @@ import (
 
 type (
 	SubscriptionsIterator struct {
-		client        *Client
+		client        *ArmClient
 		subscriptions *map[string]*armsubscriptions.Subscription
 
 		concurrency int
@@ -22,7 +22,7 @@ type (
 )
 
 // Creates new Azure Subscription iterator from Azure ARM client
-func NewSubscriptionIterator(client *Client, subscriptionID ...string) *SubscriptionsIterator {
+func NewSubscriptionIterator(client *ArmClient, subscriptionID ...string) *SubscriptionsIterator {
 	i := SubscriptionsIterator{}
 	i.client = client
 	i.concurrency = IteratorDefaultConcurrency

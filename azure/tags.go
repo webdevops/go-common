@@ -5,8 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/webdevops/go-common/utils/to"
 )
 
 const (

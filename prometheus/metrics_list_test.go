@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	cache "github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

@@ -6,6 +6,8 @@ import (
 
 	cache "github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/webdevops/go-common/utils/to"
 )
 
 type MetricRow struct {
@@ -91,7 +93,7 @@ func (m *MetricList) AddIfGreaterZero(labels prometheus.Labels, value float64) {
 }
 
 func (m *MetricList) AddTime(labels prometheus.Labels, value time.Time) {
-	timeValue := timeToFloat64(value)
+	timeValue := to.UnixTime(value)
 
 	if timeValue > 0 {
 		m.append(MetricRow{labels: labels, value: timeValue})

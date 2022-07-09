@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
@@ -16,7 +15,7 @@ import (
 
 type (
 	MsGraphClient struct {
-		cloud cloud.Configuration
+		cloudName string
 
 		logger *log.Logger
 
@@ -29,9 +28,9 @@ type (
 )
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloud.Configuration, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudName string, logger *log.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
-	client.cloud = cloudConfig
+	client.cloudName = cloudName
 
 	client.cacheTtl = 1 * time.Hour
 	client.cache = cache.New(60*time.Minute, 60*time.Second)

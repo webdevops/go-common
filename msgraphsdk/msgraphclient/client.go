@@ -1,10 +1,13 @@
 package msgraphclient
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
@@ -15,7 +18,7 @@ import (
 
 type (
 	MsGraphClient struct {
-		cloudName string
+		cloud cloud.Configuration
 
 		logger *log.Logger
 
@@ -28,9 +31,9 @@ type (
 )
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudName string, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloud.Configuration, logger *log.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
-	client.cloudName = cloudName
+	client.cloud = cloudConfig
 
 	client.cacheTtl = 1 * time.Hour
 	client.cache = cache.New(60*time.Minute, 60*time.Second)
@@ -41,6 +44,24 @@ func NewMsGraphClient(cloudName string, logger *log.Logger) *MsGraphClient {
 	client.userAgent = "go-common/unknown"
 
 	return client
+}
+
+// NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
+func NewMsGraphClientWithCloudName(cloudName string, logger *log.Logger) (*MsGraphClient, error) {
+	var cloudConfig cloud.Configuration
+
+	switch strings.ToLower(cloudName) {
+	case "azurepublic", "azurepubliccloud":
+		cloudConfig = cloud.AzurePublic
+	case "azurechina", "azurechinacloud":
+		cloudConfig = cloud.AzurePublic
+	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
+		cloudConfig = cloud.AzureGovernment
+	default:
+		return nil, fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)
+	}
+
+	return NewMsGraphClient(cloudConfig, logger), nil
 }
 
 // ServiceClient returns msgraph service client
@@ -81,7 +102,15 @@ func (c *MsGraphClient) createServiceClient() *msgraphsdk.GraphServiceClient {
 
 		return msgraphsdk.NewGraphServiceClient(adapter)
 	default:
-		cred, err := azidentity.NewEnvironmentCredential(nil)
+		// general azure authentication (env vars, service principal, msi, ...)
+		opts := azidentity.EnvironmentCredentialOptions{
+			ClientOptions: azcore.ClientOptions{
+				Cloud:            c.cloud,
+				PerCallPolicies:  nil,
+				PerRetryPolicies: nil,
+			},
+		}
+		cred, err := azidentity.NewEnvironmentCredential(&opts)
 		if err != nil {
 			c.logger.Panic(err)
 		}

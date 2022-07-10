@@ -1,6 +1,7 @@
 package msgraphclient
 
 import (
+	"fmt"
 	"strings"
 
 	jsonserialization "github.com/microsoft/kiota-serialization-json-go"
@@ -36,11 +37,12 @@ func (c *MsGraphClient) LookupPrincipalID(princpalIds ...string) (map[string]*Di
 
 	// build list of not cached entries
 	lookupPrincipalObjectIDList := []string{}
-	for PrincipalObjectID, directoryObjectInfo := range ret {
-		if directoryObjectInfo == nil {
-			lookupPrincipalObjectIDList = append(lookupPrincipalObjectIDList, PrincipalObjectID)
+	for _, princpalId := range princpalIds {
+		if _, exists := ret[princpalId]; !exists {
+			lookupPrincipalObjectIDList = append(lookupPrincipalObjectIDList, princpalId)
 		}
 	}
+	fmt.Println(lookupPrincipalObjectIDList)
 
 	// azure limits objects ids
 	chunkSize := 999
@@ -66,8 +68,8 @@ func (c *MsGraphClient) LookupPrincipalID(princpalIds ...string) (map[string]*Di
 
 			objectType := ""
 			if val, exists := objectData["@odata.type"]; exists {
-				objectType = to.String(val.(*string))
-				objectType = strings.ToLower(strings.TrimPrefix(objectType, "#microsoft.graph."))
+				objectType = to.StringLower(val.(*string))
+				objectType = strings.TrimPrefix(objectType, "#microsoft.graph.")
 			}
 
 			servicePrincipalType := ""

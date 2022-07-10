@@ -95,7 +95,9 @@ func (azureClient *ArmClient) createAuthorizer() (azcore.TokenCredential, error)
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.DefaultAzureCredentialOptions{
 			ClientOptions: azcore.ClientOptions{
-				Cloud: azureClient.cloud,
+				Cloud:            azureClient.cloud,
+				PerCallPolicies:  nil,
+				PerRetryPolicies: nil,
 			},
 		}
 		return azidentity.NewDefaultAzureCredential(&opts)

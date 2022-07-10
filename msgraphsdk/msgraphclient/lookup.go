@@ -1,7 +1,6 @@
 package msgraphclient
 
 import (
-	"fmt"
 	"strings"
 
 	jsonserialization "github.com/microsoft/kiota-serialization-json-go"
@@ -42,7 +41,6 @@ func (c *MsGraphClient) LookupPrincipalID(princpalIds ...string) (map[string]*Di
 			lookupPrincipalObjectIDList = append(lookupPrincipalObjectIDList, princpalId)
 		}
 	}
-	fmt.Println(lookupPrincipalObjectIDList)
 
 	// azure limits objects ids
 	chunkSize := 999

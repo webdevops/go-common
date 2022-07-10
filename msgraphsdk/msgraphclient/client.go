@@ -128,3 +128,13 @@ func (c *MsGraphClient) createServiceClient() *msgraphsdk.GraphServiceClient {
 		return msgraphsdk.NewGraphServiceClient(adapter)
 	}
 }
+
+// SetUserAgent set user agent for all API calls
+func (c *MsGraphClient) SetUserAgent(useragent string) {
+	c.userAgent = useragent
+}
+
+// SetCacheTtl set TTL for service discovery cache
+func (c *MsGraphClient) SetCacheTtl(ttl time.Duration) {
+	c.cacheTtl = ttl
+}

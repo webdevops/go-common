@@ -1,11 +1,9 @@
 package msgraphclient
 
 import (
-	"context"
 	"strings"
 
 	jsonserialization "github.com/microsoft/kiota-serialization-json-go"
-	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/microsoftgraph/msgraph-sdk-go/directoryobjects/getbyids"
 
 	"github.com/webdevops/go-common/utils/to"
@@ -17,13 +15,13 @@ type (
 		ServicePrincipalType string
 		ManagedIdentity      string
 		DisplayName          string
-		ObjectId             string
-		ApplicationId        string
+		ObjectID             string
+		ApplicationID        string
 	}
 )
 
-// LookupPrincipalIdMap returns information about AzureAD directory object by objectid
-func (c *MsGraphClient) LookupPrincipalIdMap(ctx context.Context, client *msgraphsdk.GraphServiceClient, princpalIds []string) (map[string]*DirectoryObject, error) {
+// LookupPrincipalID returns information about AzureAD directory object by objectid
+func (c *MsGraphClient) LookupPrincipalID(princpalIds ...string) (map[string]*DirectoryObject, error) {
 	ret := map[string]*DirectoryObject{}
 
 	// inject cached entries
@@ -57,7 +55,7 @@ func (c *MsGraphClient) LookupPrincipalIdMap(ctx context.Context, client *msgrap
 		opts := getbyids.GetByIdsPostRequestBody{}
 		opts.SetIds(principalObjectIDChunkList)
 
-		result, err := client.DirectoryObjects().GetByIds().Post(&opts)
+		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(&opts)
 		if err != nil {
 			return ret, err
 		}
@@ -99,8 +97,8 @@ func (c *MsGraphClient) LookupPrincipalIdMap(ctx context.Context, client *msgrap
 			}
 
 			ret[objectId] = &DirectoryObject{
-				ObjectId:             objectId,
-				ApplicationId:        applicationId,
+				ObjectID:             objectId,
+				ApplicationID:        applicationId,
 				Type:                 objectType,
 				ServicePrincipalType: servicePrincipalType,
 				ManagedIdentity:      managedIdentity,

@@ -7,10 +7,14 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cache "github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 )
 
 type (
@@ -94,11 +98,7 @@ func (azureClient *ArmClient) createAuthorizer() (azcore.TokenCredential, error)
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.DefaultAzureCredentialOptions{
-			ClientOptions: azcore.ClientOptions{
-				Cloud:            azureClient.cloud,
-				PerCallPolicies:  nil,
-				PerRetryPolicies: nil,
-			},
+			ClientOptions: *azureClient.NewAzCoreClientOptions(),
 		}
 		return azidentity.NewDefaultAzureCredential(&opts)
 	}
@@ -107,6 +107,42 @@ func (azureClient *ArmClient) createAuthorizer() (azcore.TokenCredential, error)
 // GetCloud returns selected Azure cloud/environment configuration
 func (azureClient *ArmClient) GetCloud() cloud.Configuration {
 	return azureClient.cloud
+}
+
+// NewAzCoreClientOptions returns new client options for all arm clients
+func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
+	clientOptions := azcore.ClientOptions{
+		Cloud:            azureClient.cloud,
+		PerCallPolicies:  []policy.Policy{},
+		PerRetryPolicies: nil,
+	}
+
+	// azure prometheus tracing
+	if tracing.TracingIsEnabled() {
+		clientOptions.PerRetryPolicies = append(
+			clientOptions.PerRetryPolicies,
+			tracing.NewTracingPolicy(),
+		)
+	}
+
+	return &clientOptions
+}
+
+// NewArmClientOptions returns new client options for all arm clients
+func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
+	clientOptions := arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{},
+	}
+
+	// azure prometheus tracing
+	if tracing.TracingIsEnabled() {
+		clientOptions.PerRetryPolicies = append(
+			clientOptions.PerRetryPolicies,
+			tracing.NewTracingPolicy(),
+		)
+	}
+
+	return &clientOptions
 }
 
 // SetUserAgent set user agent for all API calls

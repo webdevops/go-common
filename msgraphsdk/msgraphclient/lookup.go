@@ -3,8 +3,8 @@ package msgraphclient
 import (
 	"strings"
 
-	jsonserialization "github.com/microsoft/kiota-serialization-json-go"
 	"github.com/microsoftgraph/msgraph-sdk-go/directoryobjects/getbyids"
+	"github.com/microsoftgraph/msgraph-sdk-go/models"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -61,53 +61,40 @@ func (c *MsGraphClient) LookupPrincipalID(princpalIds ...string) (map[string]*Di
 		}
 
 		for _, row := range result.GetValue() {
-			objectId := to.String(row.GetId())
-			objectData := row.GetAdditionalData()
-
-			objectType := ""
-			if val, exists := objectData["@odata.type"]; exists {
-				objectType = to.StringLower(val.(*string))
-				objectType = strings.TrimPrefix(objectType, "#microsoft.graph.")
+			objectInfo := &DirectoryObject{
+				ObjectID: to.String(row.GetId()),
+				Type:     "unknown",
 			}
 
-			servicePrincipalType := ""
-			if val, exists := objectData["servicePrincipalType"]; exists {
-				servicePrincipalType = to.String(val.(*string))
-			}
+			if user, ok := row.(models.Userable); ok {
+				objectInfo.Type = "user"
+				objectInfo.DisplayName = to.String(user.GetDisplayName())
+			} else if group, ok := row.(models.Groupable); ok {
+				objectInfo.Type = "group"
+				objectInfo.DisplayName = to.String(group.GetDisplayName())
+			} else if app, ok := row.(models.Applicationable); ok {
+				objectInfo.Type = "application"
+				objectInfo.DisplayName = to.String(app.GetDisplayName())
+				objectInfo.ApplicationID = to.String(app.GetAppId())
+			} else if sp, ok := row.(models.ServicePrincipalable); ok {
+				objectInfo.Type = "serviceprincipal"
+				objectInfo.DisplayName = to.String(sp.GetDisplayName())
+				objectInfo.ApplicationID = to.String(sp.GetAppId())
+				objectInfo.ServicePrincipalType = to.String(sp.GetServicePrincipalType())
 
-			displayName := ""
-			if val, exists := objectData["displayName"]; exists {
-				displayName = to.String(val.(*string))
-			}
-
-			applicationId := ""
-			if val, exists := objectData["appId"]; exists {
-				applicationId = to.String(val.(*string))
-			}
-
-			managedIdentity := ""
-			if strings.EqualFold(servicePrincipalType, "ManagedIdentity") {
-				if alternativeNames, ok := objectData["alternativeNames"].([]*jsonserialization.JsonParseNode); ok {
-					if len(alternativeNames) >= 2 {
-						if val, err := alternativeNames[1].GetStringValue(); err == nil {
-							managedIdentity = to.String(val)
-						}
+				if strings.EqualFold(objectInfo.ServicePrincipalType, "ManagedIdentity") {
+					spAlternativeNames := sp.GetAlternativeNames()
+					if len(spAlternativeNames) >= 2 {
+						objectInfo.ManagedIdentity = spAlternativeNames[1]
 					}
 				}
 			}
 
-			ret[objectId] = &DirectoryObject{
-				ObjectID:             objectId,
-				ApplicationID:        applicationId,
-				Type:                 objectType,
-				ServicePrincipalType: servicePrincipalType,
-				ManagedIdentity:      managedIdentity,
-				DisplayName:          displayName,
-			}
+			ret[objectInfo.ObjectID] = objectInfo
 
 			// store in cache
-			cacheKey := "object:" + objectId
-			c.cache.Set(cacheKey, ret[objectId], c.cacheTtl)
+			cacheKey := "object:" + objectInfo.ObjectID
+			c.cache.Set(cacheKey, objectInfo, c.cacheTtl)
 		}
 	}
 

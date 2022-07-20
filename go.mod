@@ -12,12 +12,12 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/microsoft/kiota-authentication-azure-go v0.3.1
 	github.com/microsoft/kiota-serialization-json-go v0.5.5
-	github.com/microsoftgraph/msgraph-sdk-go v0.30.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.31.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.12.2
 	github.com/remeh/sizedwaitgroup v1.0.0
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.0
 	golang.org/x/text v0.3.7
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -32,10 +32,10 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.5.2 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v0.5.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cjlapao/common-go v0.0.22 // indirect
+	github.com/cjlapao/common-go v0.0.24 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect

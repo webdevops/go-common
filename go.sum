@@ -77,6 +77,8 @@ github.com/AzureAD/microsoft-authentication-library-for-go v0.5.1 h1:BWe8a+f/t+7
 github.com/AzureAD/microsoft-authentication-library-for-go v0.5.1/go.mod h1:Vt9sXTKwMyGcOxSmLDMnGPgqsUg7m8pe215qMLrDXw4=
 github.com/AzureAD/microsoft-authentication-library-for-go v0.5.2 h1:BGX4OiGP9htYSd6M3pAZctcUUSruhIAUVkv2X0Cn9yE=
 github.com/AzureAD/microsoft-authentication-library-for-go v0.5.2/go.mod h1:Vt9sXTKwMyGcOxSmLDMnGPgqsUg7m8pe215qMLrDXw4=
+github.com/AzureAD/microsoft-authentication-library-for-go v0.5.3 h1:TsFCaaF5tR4XN8b4zLVl/J4qMb0nf80Q4CXcpXDNJDY=
+github.com/AzureAD/microsoft-authentication-library-for-go v0.5.3/go.mod h1:Vt9sXTKwMyGcOxSmLDMnGPgqsUg7m8pe215qMLrDXw4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -99,6 +101,8 @@ github.com/cjlapao/common-go v0.0.20 h1:AIZBtuxwJPXFqyxFOlvVDWZgbsuTSquZEUw4KMx8
 github.com/cjlapao/common-go v0.0.20/go.mod h1:EVLEXIxsBHblPMrhJYOvL4yBCcBj7IYDdW88VlfxpPM=
 github.com/cjlapao/common-go v0.0.22 h1:hQQ4mMupPp47eZRb5D8mxjrp0VyRSWNk/FOld7wxMsQ=
 github.com/cjlapao/common-go v0.0.22/go.mod h1:RZuwsymEIdwSubzUBpNYmmGfeITqHDV5iTgnr6zYwSc=
+github.com/cjlapao/common-go v0.0.24 h1:KXtWYJlSkeevL7DnfX2HGbFzQjk1rIBd5nJEn2tIbY8=
+github.com/cjlapao/common-go v0.0.24/go.mod h1:RZuwsymEIdwSubzUBpNYmmGfeITqHDV5iTgnr6zYwSc=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -233,6 +237,8 @@ github.com/microsoftgraph/msgraph-sdk-go v0.28.0 h1:BolP/vNW7gsNXivg/qikcdftOicL
 github.com/microsoftgraph/msgraph-sdk-go v0.28.0/go.mod h1:MB2iPD8vd8RTRAqlKTZfhLvE8OBiC/vjaOy8+J+nF1k=
 github.com/microsoftgraph/msgraph-sdk-go v0.30.0 h1:HsQHy5YBHQABxQOfzWovkZw7ee4zQBYytjB0lF7HGyM=
 github.com/microsoftgraph/msgraph-sdk-go v0.30.0/go.mod h1:HsVKM/WvckKfF9CM1y5JNCfE9DmFKxz5/vJ3fHcZJkU=
+github.com/microsoftgraph/msgraph-sdk-go v0.31.0 h1:Fpo914xD7TWlYUxctwBLYyx/NavWzYk4FoZ1Sn9JYkI=
+github.com/microsoftgraph/msgraph-sdk-go v0.31.0/go.mod h1:HsVKM/WvckKfF9CM1y5JNCfE9DmFKxz5/vJ3fHcZJkU=
 github.com/microsoftgraph/msgraph-sdk-go-core v0.26.1 h1:wzEoPk6uyd+SkBur9NpzpPfKseUQYT1yjFkDUueLpfk=
 github.com/microsoftgraph/msgraph-sdk-go-core v0.26.1/go.mod h1:cKWHZ9CfJnSvBJxzXnAXRA+SSy8JeAbS+4kOn3uyOIY=
 github.com/microsoftgraph/msgraph-sdk-go-core v0.26.2 h1:rYNyzWdTM9W7ePbiUX3pO0rpBgGFo6CxoN0Qh3QqDI0=
@@ -294,6 +300,8 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.6.0/go.mod h1:7uNnSEd1DgxDLC74fIahvMZmmYsHGZGEOFrfsX/uA88=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
+github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
+github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
@@ -301,6 +309,7 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
+github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.2 h1:4jaiDzPyXQvSd7D0EjG45355tLlV3VOECpq10pLC+8s=
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=

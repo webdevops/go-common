@@ -41,8 +41,8 @@ func (p tracingPolicy) Do(req *policy.Request) (*http.Response, error) {
 
 	// try to detect subscriptionId from url
 	resourceProvider := ""
-	if matches := providerRegexp.FindStringSubmatch(path); len(matches) >= 2 {
-		resourceProvider = strings.ToLower(matches[1])
+	if matches := providerRegexp.FindStringSubmatch(path); len(matches) >= 3 {
+		resourceProvider = strings.ToLower(matches[2])
 	}
 
 	tenantId := extractTenantIdFromRequest(res)

@@ -47,8 +47,8 @@ type (
 
 var (
 	envVarSplit        = regexp.MustCompile(`([\s,]+)`)
-	subscriptionRegexp = regexp.MustCompile(`^/subscriptions/([^/]+)/?.*$`)
-	providerRegexp     = regexp.MustCompile(`^/subscriptions/[^/]+/resourcegroups/[^/]+/providers/([^/]+/[^/]+)/.*$`)
+	subscriptionRegexp = regexp.MustCompile(`^(?i)/subscriptions/([^/]+)/?.*$`)
+	providerRegexp     = regexp.MustCompile(`^(?i)/subscriptions/[^/]+(/resourcegroups/[^/]+)?/providers/([^/]+)/.*$`)
 
 	tracingApiRequestEnabled      bool
 	tracingLabelsApiEndpoint      bool

@@ -21,15 +21,15 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 | `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                            | Enables/disables `azurerm_api_ratelimit` autoreset after fetch |
 
 
-| `azurerm_api_request` label | Status             | Description                                                                                              |
-|-----------------------------|--------------------|----------------------------------------------------------------------------------------------------------|
-| `apiEndpoint`               | enabled by default | hostname of endpoint (max 3 parts)                                                                       |
-| `routingRegion`             | enabled by default | detected region for API call, either routing region from Azure Management API or Azure resource location |
-| `subscriptionID`            | enabled by default | detected subscriptionID                                                                                  |
-| `tenantID`                  | enabled by default | detected tenantID (extracted from jwt auth token)                                                        |
-| `resourceProvider`          | enabled by default | detected Azure Management API provider                                                                   |
-| `method`                    | enabled by default | HTTP method                                                                                              |
-| `statusCode`                | enabled by default | HTTP status code                                                                                         |
+| `azurerm_api_request` label | Status              | Description                                                                                              |
+|-----------------------------|---------------------|----------------------------------------------------------------------------------------------------------|
+| `apiEndpoint`               | enabled by default  | hostname of endpoint (max 3 parts)                                                                       |
+| `routingRegion`             | disabled by default | detected region for API call, either routing region from Azure Management API or Azure resource location |
+| `subscriptionID`            | enabled by default  | detected subscriptionID                                                                                  |
+| `tenantID`                  | enabled by default  | detected tenantID (extracted from jwt auth token)                                                        |
+| `resourceProvider`          | enabled by default  | detected Azure Management API provider                                                                   |
+| `method`                    | enabled by default  | HTTP method                                                                                              |
+| `statusCode`                | enabled by default  | HTTP status code                                                                                         |
 
 ## Azure module
 

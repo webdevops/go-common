@@ -73,7 +73,7 @@ func TracingIsEnabled() bool {
 func init() {
 	// azureApiRequest settings
 	tracingLabelsApiEndpoint = checkIfEnvVarContains(EnvVarApiRequestLables, "apiEndpoint", true)
-	tracingLabelsRoutingRegion = checkIfEnvVarContains(EnvVarApiRequestLables, "routingRegion", true)
+	tracingLabelsRoutingRegion = checkIfEnvVarContains(EnvVarApiRequestLables, "routingRegion", false)
 	tracingLabelsSubscriptionID = checkIfEnvVarContains(EnvVarApiRequestLables, "subscriptionID", true)
 	tracingLabelsTenantID = checkIfEnvVarContains(EnvVarApiRequestLables, "tenantID", true)
 	tracingLabelsResourceProvider = checkIfEnvVarContains(EnvVarApiRequestLables, "resourceProvider", true)

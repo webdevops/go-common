@@ -60,7 +60,7 @@ var (
 	tracingLabelsStatusCode       bool
 	tracingApiRatelimitEnabled    bool
 	tracingApiRatelimitAutoreset  bool
-	tracingBuckets                = []float64{1, 2.5, 5, 10, 30, 60, 90, 120}
+	tracingBuckets                = []float64{1, 5, 15, 30, 90}
 
 	prometheusAzureApiRequest   *prometheus.HistogramVec
 	prometheusAzureApiRatelimit *prometheus.GaugeVec

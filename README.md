@@ -12,13 +12,13 @@ environment variables (eg. setting buckets, disabling metrics or disable autores
 
 ### Settings
 
-| Environment variable                     | Example                            | Description                                                    |
-|------------------------------------------|------------------------------------|----------------------------------------------------------------|
-| `METRIC_AZURERM_API_REQUEST_BUCKETS`     | `1, 2.5, 5, 10, 30, 60, 90, 120`   | Sets buckets for `azurerm_api_request` histogram metric        |
-| `METRIC_AZURERM_API_REQUEST_ENABLE`      | `false`                            | Enables/disables `azurerm_api_request_*` metric                |
-| `METRIC_AZURERM_API_REQUEST_LABELS`      | `apiEndpoint, method, statusCode`  | Controls labels of `azurerm_api_request_*` metric              |
-| `METRIC_AZURERM_API_RATELIMIT_ENABLE`    | `false`                            | Enables/disables `azurerm_api_ratelimit` metric                |
-| `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                            | Enables/disables `azurerm_api_ratelimit` autoreset after fetch |
+| Environment variable                     | Example                           | Description                                                    |
+|------------------------------------------|-----------------------------------|----------------------------------------------------------------|
+| `METRIC_AZURERM_API_REQUEST_BUCKETS`     | `1, 5, 15, 30, 90`                | Sets buckets for `azurerm_api_request` histogram metric        |
+| `METRIC_AZURERM_API_REQUEST_ENABLE`      | `false`                           | Enables/disables `azurerm_api_request_*` metric                |
+| `METRIC_AZURERM_API_REQUEST_LABELS`      | `apiEndpoint, method, statusCode` | Controls labels of `azurerm_api_request_*` metric              |
+| `METRIC_AZURERM_API_RATELIMIT_ENABLE`    | `false`                           | Enables/disables `azurerm_api_ratelimit` metric                |
+| `METRIC_AZURERM_API_RATELIMIT_AUTORESET` | `false`                           | Enables/disables `azurerm_api_ratelimit` autoreset after fetch |
 
 
 | `azurerm_api_request` label | Status              | Description                                                                                              |

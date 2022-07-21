@@ -22,6 +22,10 @@ func (p tracingPolicy) Do(req *policy.Request) (*http.Response, error) {
 	// Forward the request to the next policy in the pipeline.
 	res, err := req.Next()
 
+	if res == nil {
+		return res, err
+	}
+
 	requestDuration := time.Since(start)
 
 	// get hostname (shorten it to 3 parts)

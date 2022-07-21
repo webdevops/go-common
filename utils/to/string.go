@@ -37,3 +37,12 @@ func StringMap(val map[string]*string) (ret map[string]string) {
 	}
 	return
 }
+
+// StringMapPtr returns pointer to a map with string pointers from a string map
+func StringMapPtr(val map[string]string) *map[string]*string {
+	ret := make(map[string]*string, len(val))
+	for rowKey, rowVal := range val {
+		ret[rowKey] = StringPtr(rowVal)
+	}
+	return &ret
+}

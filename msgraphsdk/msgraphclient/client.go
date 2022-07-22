@@ -66,22 +66,27 @@ func NewMsGraphClientWithCloudName(cloudName string, logger *log.Logger) (*MsGra
 
 // ServiceClient returns msgraph service client
 func (c *MsGraphClient) ServiceClient() *msgraphsdk.GraphServiceClient {
-	cacheKey := "authorizer"
+	return msgraphsdk.NewGraphServiceClient(c.RequestAdapter())
+}
+
+// RequestAdapter returns msgraph request adapter
+func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
+	cacheKey := "adapter"
 	if v, ok := c.cache.Get(cacheKey); ok {
-		if cred, ok := v.(*msgraphsdk.GraphServiceClient); ok {
-			return cred
+		if adapter, ok := v.(*msgraphsdk.GraphRequestAdapter); ok {
+			return adapter
 		}
 	}
 
-	serviceClient := c.createServiceClient()
+	adapter := c.createRequestAdapter()
 
-	c.cache.Set(cacheKey, serviceClient, c.cacheAuthorizerTtl)
+	c.cache.Set(cacheKey, adapter, c.cacheAuthorizerTtl)
 
-	return serviceClient
+	return adapter
 }
 
-// createServiceClient returns new msgraph service client
-func (c *MsGraphClient) createServiceClient() *msgraphsdk.GraphServiceClient {
+// createRequestAdapter returns new msgraph request adapter
+func (c *MsGraphClient) createRequestAdapter() *msgraphsdk.GraphRequestAdapter {
 	// azure authorizer
 	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
 	case "az", "cli", "azcli":
@@ -100,7 +105,7 @@ func (c *MsGraphClient) createServiceClient() *msgraphsdk.GraphServiceClient {
 			c.logger.Panic(err)
 		}
 
-		return msgraphsdk.NewGraphServiceClient(adapter)
+		return adapter
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.EnvironmentCredentialOptions{
@@ -125,7 +130,7 @@ func (c *MsGraphClient) createServiceClient() *msgraphsdk.GraphServiceClient {
 			c.logger.Panic(err)
 		}
 
-		return msgraphsdk.NewGraphServiceClient(adapter)
+		return adapter
 	}
 }
 

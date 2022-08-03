@@ -1,7 +1,6 @@
 package msgraphclient
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -14,6 +13,8 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 )
 
 type (
@@ -48,19 +49,10 @@ func NewMsGraphClient(cloudConfig cloud.Configuration, logger *log.Logger) *MsGr
 
 // NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
 func NewMsGraphClientWithCloudName(cloudName string, logger *log.Logger) (*MsGraphClient, error) {
-	var cloudConfig cloud.Configuration
-
-	switch strings.ToLower(cloudName) {
-	case "azurepublic", "azurepubliccloud":
-		cloudConfig = cloud.AzurePublic
-	case "azurechina", "azurechinacloud":
-		cloudConfig = cloud.AzurePublic
-	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
-		cloudConfig = cloud.AzureGovernment
-	default:
-		return nil, fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)
+	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
+	if err != nil {
+		logger.Panic(err.Error())
 	}
-
 	return NewMsGraphClient(cloudConfig, logger), nil
 }
 

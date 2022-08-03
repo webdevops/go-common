@@ -1,7 +1,6 @@
 package armclient
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 )
 
@@ -52,17 +52,9 @@ func NewArmClient(cloudConfig cloud.Configuration, logger *log.Logger) *ArmClien
 
 // NewArmClientWithCloudName creates new Azure SDK ARM client with environment name as string
 func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient, error) {
-	var cloudConfig cloud.Configuration
-
-	switch strings.ToLower(cloudName) {
-	case "azurepublic", "azurepubliccloud":
-		cloudConfig = cloud.AzurePublic
-	case "azurechina", "azurechinacloud":
-		cloudConfig = cloud.AzurePublic
-	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
-		cloudConfig = cloud.AzureGovernment
-	default:
-		return nil, fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)
+	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
+	if err != nil {
+		logger.Panic(err.Error())
 	}
 
 	return NewArmClient(cloudConfig, logger), nil

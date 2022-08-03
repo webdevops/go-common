@@ -40,7 +40,10 @@ type (
 			resourceGroupTags []string
 
 			lookup struct {
-				lock              sync.RWMutex
+				lock sync.RWMutex
+
+				lastUpdate map[string]time.Time
+
 				subscriptionTags  map[string]map[string]string
 				resourceGroupTags map[string]map[string]map[string]string
 			}
@@ -58,6 +61,9 @@ func NewClient(environment azure.Environment, logger *log.Logger) *Client {
 	azureClient.cacheAuthorizerTtl = 15 * time.Minute
 
 	azureClient.logger = logger
+
+	azureClient.tagInheritance.lookup.lastUpdate = map[string]time.Time{}
+	azureClient.tagInheritance.lookup.subscriptionTags = map[string]map[string]string{}
 
 	return azureClient
 }

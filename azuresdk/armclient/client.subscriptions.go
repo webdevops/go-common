@@ -56,7 +56,7 @@ func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[
 func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string]*armsubscriptions.Subscription, error) {
 	list := map[string]*armsubscriptions.Subscription{}
 
-	client, err := armsubscriptions.NewClient(azureClient.GetCred(), nil)
+	client, err := armsubscriptions.NewClient(azureClient.GetCred(), azureClient.NewArmClientOptions())
 	if err != nil {
 		return nil, err
 	}

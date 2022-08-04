@@ -123,7 +123,9 @@ func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 // NewArmClientOptions returns new client options for all arm clients
 func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
 	clientOptions := arm.ClientOptions{
-		ClientOptions: policy.ClientOptions{},
+		ClientOptions: policy.ClientOptions{
+			Cloud: azureClient.cloud,
+		},
 	}
 
 	// azure prometheus tracing

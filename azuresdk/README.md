@@ -25,7 +25,7 @@ Example configuration:
     "services": {
         "resourceManager": {
             "audience": "https://management.core.windows.net/",
-            "endpoint": "https://management.azure.com",
+            "endpoint": "https://management.azure.com"
         }
     }
 }

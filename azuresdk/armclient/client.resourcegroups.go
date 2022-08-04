@@ -35,7 +35,7 @@ func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subs
 func (azureClient *ArmClient) ListResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
 	list := map[string]*armresources.ResourceGroup{}
 
-	client, err := armresources.NewResourceGroupsClient(subscriptionID, azureClient.GetCred(), nil)
+	client, err := armresources.NewResourceGroupsClient(subscriptionID, azureClient.GetCred(), azureClient.NewArmClientOptions())
 	if err != nil {
 		return nil, err
 	}

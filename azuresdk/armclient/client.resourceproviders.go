@@ -66,7 +66,7 @@ func (azureClient *ArmClient) ListCachedResourceProviders(ctx context.Context, s
 func (azureClient *ArmClient) ListResourceProviders(ctx context.Context, subscriptionID string) (map[string]*armresources.Provider, error) {
 	list := map[string]*armresources.Provider{}
 
-	client, err := armresources.NewProvidersClient(subscriptionID, azureClient.GetCred(), nil)
+	client, err := armresources.NewProvidersClient(subscriptionID, azureClient.GetCred(), azureClient.NewArmClientOptions())
 	if err != nil {
 		return nil, err
 	}

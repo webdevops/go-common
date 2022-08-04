@@ -7,13 +7,18 @@
 - Azure Public cloud (default)
 - Azure China cloud
 - Azure Government cloud
-- Azure Private cloud (needs additional configuration)
+- Azure Private cloud (onpremise, needs additional cloud configuration)
 
+#### Azure Private cloud
 
-### Azure Private cloud
+Azure private cloud needs additional custom cloud configuration which can be passed environment variables:
 
-For setting up Azure Private cloud you have to pass additional configuration via env var `AZURE_CLOUD_CONFIG`:
+| Env var                   | Description                          |
+|---------------------------|--------------------------------------|
+| `AZURE_CLOUD_CONFIG`      | JSON config as string (single line)  |
+| `AZURE_CLOUD_CONFIG_FILE` | Path to JSON config as string        |
 
+Example configuration:
 ```json
 {
     "activeDirectoryAuthorityHost": "https://login.microsoftonline.com/",
@@ -25,8 +30,6 @@ For setting up Azure Private cloud you have to pass additional configuration via
     }
 }
 ```
-
-## armclient module
 
 ### Tag handling
 

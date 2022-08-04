@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	resourceIdRegExp = regexp.MustCompile(`(?i)^/subscriptions/(?P<subscription>[^/]+)(/resourceGroups/(?P<resourceGroup>[^/]+))?(/providers/(?P<resourceProvider>[^/]+)/(?P<resourceProviderNamespace>[^/]+)/(?P<resourceName>[^/]+)(/(?P<resourceSubPath>.+))?)?/?$`)
+	resourceIdRegExp = regexp.MustCompile(`(?i)^/subscriptions/(?P<subscription>[^/]+)(/resourceGroups/(?P<resourceGroup>[^/]+))?(/providers/(?P<resourceProviderNamespace>[^/]+)/(?P<resourceProvider>[^/]+)/(?P<resourceName>[^/]+)(/(?P<resourceSubPath>.+))?)?/?$`)
 )
 
 type (
@@ -15,8 +15,8 @@ type (
 		OriginalResourceId        string
 		Subscription              string
 		ResourceGroup             string
-		ResourceProviderName      string
 		ResourceProviderNamespace string
+		ResourceProviderName      string
 		ResourceType              string
 		ResourceName              string
 		ResourceSubPath           string
@@ -41,11 +41,11 @@ func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
 		)
 	}
 
-	if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" && resource.ResourceName != "" {
+	if resource.ResourceProviderNamespace != "" && resource.ResourceProviderName != "" && resource.ResourceName != "" {
 		resourceId += fmt.Sprintf(
 			"/providers/%s/%s/%s",
-			resource.ResourceProviderName,
 			resource.ResourceProviderNamespace,
+			resource.ResourceProviderName,
 			resource.ResourceName,
 		)
 
@@ -58,6 +58,13 @@ func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
 	}
 
 	return
+}
+
+func (resource *AzureResourceDetails) ResourceProvider() (provider string) {
+	if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" && resource.ResourceName != "" {
+
+	}
+	return provider
 }
 
 // Parse Azure ResourceID and returns AzureResourceDetails object with splitted and lowercased information fields
@@ -87,11 +94,11 @@ func ParseResourceId(resourceId string) (resource *AzureResourceDetails, err err
 		}
 
 		// build resourcetype
-		if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" {
+		if resource.ResourceProviderNamespace != "" && resource.ResourceProviderName != "" {
 			resource.ResourceType = fmt.Sprintf(
 				"%s/%s",
-				resource.ResourceProviderName,
 				resource.ResourceProviderNamespace,
+				resource.ResourceProviderName,
 			)
 		}
 

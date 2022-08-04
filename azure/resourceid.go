@@ -11,7 +11,7 @@ var (
 )
 
 type (
-	AzureResourceDetails struct {
+	AzureResourceInfo struct {
 		OriginalResourceId        string
 		Subscription              string
 		ResourceGroup             string
@@ -23,7 +23,7 @@ type (
 	}
 )
 
-func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
+func (resource *AzureResourceInfo) ResourceId() (resourceId string) {
 	if resource.Subscription != "" {
 		resourceId += fmt.Sprintf(
 			"/subscriptions/%s",
@@ -59,8 +59,8 @@ func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
 	return
 }
 
-func ParseResourceId(resourceId string) (resource *AzureResourceDetails, err error) {
-	resource = &AzureResourceDetails{}
+func ParseResourceId(resourceId string) (resource *AzureResourceInfo, err error) {
+	resource = &AzureResourceInfo{}
 
 	if matches := resourceIdRegExp.FindStringSubmatch(resourceId); len(matches) >= 1 {
 		resource.OriginalResourceId = resourceId

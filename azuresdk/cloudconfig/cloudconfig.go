@@ -9,31 +9,56 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 )
 
+const MicrosoftGraph cloud.ServiceName = "microsoftGraph"
+
 // NewCloudConfig creates a new cloud configuration object based on cloud name (eg. AzurePublicCloud)
-func NewCloudConfig(cloudName string) (cloud.Configuration, error) {
+func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
 	switch strings.ToLower(cloudName) {
 	// ----------------------------------------------------
 	// Azure Public cloud (default)
 	case "azurepublic", "azurepubliccloud":
-		return cloud.AzurePublic, nil
+		config, err = cloud.AzurePublic, nil
+		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+			Audience: "https://graph.microsoft.com/",
+			Endpoint: "https://graph.microsoft.com",
+		})
 
 	// ----------------------------------------------------
 	// Azure China cloud
 	case "azurechina", "azurechinacloud":
-		return cloud.AzureChina, nil
+		config, err = cloud.AzureChina, nil
+		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+			Audience: "https://microsoftgraph.chinaclouapi.cn/",
+			Endpoint: "https://microsoftgraph.chinaclouapi.cn",
+		})
 
 	// ----------------------------------------------------
 	// Azure Government cloud
 	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
-		return cloud.AzureGovernment, nil
+		config, err = cloud.AzureGovernment, nil
+		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+			Audience: "https://login.microsoftonline.us/",
+			Endpoint: "https://login.microsoftonline.us",
+		})
 
 	// ----------------------------------------------------
 	// Azure Private Cloud (onpremise, custom configuration via json)
 	case "azureprivate", "azurepprivatecloud":
-		return createAzurePrivateCloudConfig()
+		config, err = createAzurePrivateCloudConfig()
+
+	default:
+		err = fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)
 	}
 
-	return cloud.Configuration{}, fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)
+	return
+}
+
+func injectServiceConfig(config *cloud.Configuration, serviceName cloud.ServiceName, serviceConfig cloud.ServiceConfiguration) {
+	if config.Services == nil {
+		config.Services = map[cloud.ServiceName]cloud.ServiceConfiguration{}
+	}
+
+	config.Services[serviceName] = serviceConfig
 }
 
 func createAzurePrivateCloudConfig() (cloud.Configuration, error) {

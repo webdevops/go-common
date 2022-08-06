@@ -4,10 +4,10 @@
 
 ### Environment support
 
-- Azure Public cloud (default)
-- Azure China cloud
-- Azure Government cloud
-- Azure Private cloud (onpremise, needs additional cloud configuration)
+- `AzurePublicCloud` (default)
+- `Azure ChinaCloud`
+- `AzureGovernmentCloud`
+- `AzurePrivateCloud` (on-premise, needs additional cloud configuration)
 
 #### Azure Private cloud
 
@@ -26,6 +26,10 @@ Example configuration:
         "resourceManager": {
             "audience": "https://management.core.windows.net/",
             "endpoint": "https://management.azure.com"
+        },
+        "microsoftGraph": {
+            "audience": "https://graph.microsoft.com",
+            "endpoint": "https://graph.microsoft.com"
         }
     }
 }

@@ -78,7 +78,7 @@ func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
 }
 
 // createRequestAdapter returns new msgraph request adapter
-func (c *MsGraphClient) createRequestAdapter() *msgraphsdk.GraphRequestAdapter {
+func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequestAdapter) {
 	// azure authorizer
 	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
 	case "az", "cli", "azcli":
@@ -92,12 +92,10 @@ func (c *MsGraphClient) createRequestAdapter() *msgraphsdk.GraphRequestAdapter {
 			c.logger.Panic(err)
 		}
 
-		adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
+		adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
 		if err != nil {
 			c.logger.Panic(err)
 		}
-
-		return adapter
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.EnvironmentCredentialOptions{
@@ -117,13 +115,20 @@ func (c *MsGraphClient) createRequestAdapter() *msgraphsdk.GraphRequestAdapter {
 			c.logger.Panic(err)
 		}
 
-		adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
+		adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
 		if err != nil {
 			c.logger.Panic(err)
 		}
-
-		return adapter
 	}
+
+	// set endpoint from cloudconfig
+	if c.cloud.Services != nil {
+		if serviceConfig, exists := c.cloud.Services[cloudconfig.MicrosoftGraph]; exists {
+			adapter.SetBaseUrl(serviceConfig.Endpoint + "/v1.0")
+		}
+	}
+
+	return
 }
 
 // SetUserAgent set user agent for all API calls

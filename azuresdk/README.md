@@ -1,13 +1,15 @@
-# Go Common library for webdevops projects
+# Azure common library webdevops projects
 
 ## ArmClient
 
 ### Environment support
 
-- `AzurePublicCloud` (default)
-- `Azure ChinaCloud`
-- `AzureGovernmentCloud`
-- `AzurePrivateCloud` (on-premise, needs additional cloud configuration)
+| Cloud name             | Description                                                                                  |
+|------------------------|----------------------------------------------------------------------------------------------|
+| `AzurePublicCloud`     | Default Azure cloud, using https://portal.azure.com                                          |
+| `AzureChinaCloud`      | Azure cloud in China, using https://porta.azure.cn                                           |
+| `AzureGovernmentCloud` | US Government Azure cloud                                                                    |
+| `AzurePrivateCloud`    | Private on-premise installation of Azure Cloud, needs additional configuration for endpoints |
 
 #### Azure Private cloud
 

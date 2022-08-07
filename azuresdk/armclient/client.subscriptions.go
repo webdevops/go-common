@@ -16,7 +16,7 @@ func (azureClient *ArmClient) ListCachedSubscriptionsWithFilter(ctx context.Cont
 
 	// filter subscriptions
 	if len(subscriptionFilter) > 0 {
-		var tmp map[string]*armsubscriptions.Subscription
+		tmp := map[string]*armsubscriptions.Subscription{}
 		for _, subscription := range availableSubscriptions {
 			for _, subscriptionID := range subscriptionFilter {
 				if strings.EqualFold(subscriptionID, *subscription.SubscriptionID) {

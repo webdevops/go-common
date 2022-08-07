@@ -10,8 +10,6 @@ import (
 
 // ListCachedResourceGroups return cached list of Azure ResourceGroups as map (key is name of ResourceGroup)
 func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
-	list := map[string]*armresources.ResourceGroup{}
-
 	cacheKey := "resourcegroups:" + subscriptionID
 	if v, ok := azureClient.cache.Get(cacheKey); ok {
 		if cacheData, ok := v.(map[string]*armresources.ResourceGroup); ok {

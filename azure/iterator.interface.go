@@ -6,8 +6,7 @@ import (
 
 type (
 	InterfaceIterator struct {
-		client *Client
-		list   []interface{}
+		list []interface{}
 
 		concurrency int
 	}

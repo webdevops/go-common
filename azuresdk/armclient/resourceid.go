@@ -11,7 +11,7 @@ var (
 )
 
 type (
-	AzureResourceDetails struct {
+	AzureResourceInfo struct {
 		OriginalResourceId        string
 		Subscription              string
 		ResourceGroup             string
@@ -23,8 +23,8 @@ type (
 	}
 )
 
-// Rebuild ResourceID
-func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
+// ResourceId builds resoruceid from resource information
+func (resource *AzureResourceInfo) ResourceId() (resourceId string) {
 	if resource.Subscription != "" {
 		resourceId += fmt.Sprintf(
 			"/subscriptions/%s",
@@ -60,16 +60,21 @@ func (resource *AzureResourceDetails) ResourceId() (resourceId string) {
 	return
 }
 
-func (resource *AzureResourceDetails) ResourceProvider() (provider string) {
-	if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" && resource.ResourceName != "" {
-
+// ResourceProvider returns resource provider (namespace/name) from resource information
+func (resource *AzureResourceInfo) ResourceProvider() (provider string) {
+	if resource.ResourceProviderName != "" && resource.ResourceProviderNamespace != "" {
+		provider += fmt.Sprintf(
+			"/%s/%s",
+			resource.ResourceProviderNamespace,
+			resource.ResourceProviderName,
+		)
 	}
 	return provider
 }
 
-// Parse Azure ResourceID and returns AzureResourceDetails object with splitted and lowercased information fields
-func ParseResourceId(resourceId string) (resource *AzureResourceDetails, err error) {
-	resource = &AzureResourceDetails{}
+// ParseResourceId parses Azure ResourceID and returns AzureResourceInfo object with splitted and lowercased information fields
+func ParseResourceId(resourceId string) (resource *AzureResourceInfo, err error) {
+	resource = &AzureResourceInfo{}
 
 	if matches := resourceIdRegExp.FindStringSubmatch(resourceId); len(matches) >= 1 {
 		resource.OriginalResourceId = resourceId

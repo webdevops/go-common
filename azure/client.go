@@ -148,7 +148,7 @@ func (azureClient *Client) ListCachedSubscriptionsWithFilter(ctx context.Context
 
 	// filter subscriptions
 	if len(subscriptionID) > 0 {
-		var tmp map[string]subscriptions.Subscription
+		tmp := map[string]subscriptions.Subscription{}
 		for _, subscription := range availableSubscriptions {
 			for _, filterSubscriptionID := range subscriptionID {
 				if strings.EqualFold(filterSubscriptionID, *subscription.SubscriptionID) {
@@ -217,8 +217,6 @@ func (azureClient *Client) ListSubscriptions(ctx context.Context) (map[string]su
 }
 
 func (azureClient *Client) ListCachedResourceGroups(ctx context.Context, subscription subscriptions.Subscription) (map[string]resources.Group, error) {
-	list := map[string]resources.Group{}
-
 	cacheKey := "resourcegroups:" + to.String(subscription.SubscriptionID)
 	if v, ok := azureClient.cache.Get(cacheKey); ok {
 		if cacheData, ok := v.(map[string]resources.Group); ok {

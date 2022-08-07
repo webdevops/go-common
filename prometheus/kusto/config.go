@@ -3,7 +3,7 @@ package kusto
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -321,7 +321,7 @@ func NewConfig(path string) (config Config) {
 	config = Config{}
 
 	/*  #nosec G304 */
-	if data, err := ioutil.ReadFile(path); err == nil {
+	if data, err := os.ReadFile(path); err == nil {
 		filecontent = data
 	} else {
 		panic(err)

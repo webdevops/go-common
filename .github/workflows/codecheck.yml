@@ -1,0 +1,20 @@
+name: "CI codecheck"
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+      - name: Run Golangci lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest
+          args: -E exportloopref,gofmt --timeout=30m

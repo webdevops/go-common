@@ -2,9 +2,34 @@
 
 ## ArmClient
 
-### Environment support
+### Authentication
 
-| Cloud name             | Description                                                                                  |
+Hint: please also check [microsoft azure-sdk documentation](https://docs.microsoft.com/en-us/azure/developer/go/azure-sdk-authentication) for advanced usage.
+
+#### Service principal with a secret
+
+| Variable name          | Value                                        |
+|------------------------|----------------------------------------------|
+| `AZURE_CLIENT_ID`      | Application ID of an Azure service principal |
+| `AZURE_TENANT_ID`      | ID of the application's Azure AD tenant      |
+| `AZURE_CLIENT_SECRET`  | Password of the Azure service principal      |
+
+#### Service principal with certificate
+
+| Variable name                   | Value                                                                           |
+|---------------------------------|---------------------------------------------------------------------------------|
+| `AZURE_CLIENT_ID`               | ID of an Azure AD application                                                   |
+| `AZURE_TENANT_ID`               | ID of the application's Azure AD tenant                                         |
+| `AZURE_CLIENT_CERTIFICATE_PATH` | Path to a certificate file including private key (without password protection)  |
+
+#### AzureCLI authentication
+
+To enable authentication via AzureCLI set `AZURE_AUTH=az` and the token is fetched from Azure CLI.
+For this method the `az` binary must be available inside the container/environment.
+
+### Azure Cloud/Environment support
+
+| `AZURE_ENVIRONMENT`    | Description                                                                                  |
 |------------------------|----------------------------------------------------------------------------------------------|
 | `AzurePublicCloud`     | Default Azure cloud, using https://portal.azure.com                                          |
 | `AzureChinaCloud`      | Azure cloud in China, using https://porta.azure.cn                                           |

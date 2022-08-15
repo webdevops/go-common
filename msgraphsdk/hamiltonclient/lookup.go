@@ -3,6 +3,7 @@ package hamiltonclient
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/manicminer/hamilton/msgraph"
 
@@ -69,7 +70,22 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 				Type:     "unknown",
 			}
 
-			// TODO
+			if row.ODataType != nil {
+				switch strings.ToLower(*row.ODataType) {
+				case "microsoft.graph.user":
+					objectInfo.Type = "user"
+					// TODO get more data
+				case "microsoft.graph.group":
+					objectInfo.Type = "group"
+					// TODO get more data
+				case "microsoft.graph.serviceprincipal":
+					objectInfo.Type = "serviceprincipal"
+					// TODO get more data
+				case "microsoft.graph.application":
+					objectInfo.Type = "application"
+					// TODO get more data
+				}
+			}
 
 			ret[objectInfo.ObjectID] = objectInfo
 

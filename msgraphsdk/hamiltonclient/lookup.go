@@ -1,11 +1,10 @@
-package msgraphclient
+package hamiltonclient
 
 import (
 	"context"
-	"strings"
+	"errors"
 
-	"github.com/microsoftgraph/msgraph-sdk-go/directoryobjects/getbyids"
-	"github.com/microsoftgraph/msgraph-sdk-go/models"
+	"github.com/manicminer/hamilton/msgraph"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -53,43 +52,24 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		principalObjectIDChunkList := lookupPrincipalObjectIDList[i:end]
 
-		opts := getbyids.GetByIdsPostRequestBody{}
-		opts.SetIds(principalObjectIDChunkList)
+		client := msgraph.NewDirectoryObjectsClient(c.tenantID)
+		client.BaseClient.Authorizer = c.Authorizer()
 
-		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(&opts)
+		result, _, err := client.GetByIds(ctx, principalObjectIDChunkList, []string{})
 		if err != nil {
-			return ret, err
+			return nil, err
+		}
+		if result == nil {
+			return nil, errors.New(`bad MSGraph API response, nil results received`)
 		}
 
-		for _, row := range result.GetValue() {
+		for _, row := range *result {
 			objectInfo := &DirectoryObject{
-				ObjectID: to.String(row.GetId()),
+				ObjectID: to.String(row.ID),
 				Type:     "unknown",
 			}
 
-			if user, ok := row.(models.Userable); ok {
-				objectInfo.Type = "user"
-				objectInfo.DisplayName = to.String(user.GetDisplayName())
-			} else if group, ok := row.(models.Groupable); ok {
-				objectInfo.Type = "group"
-				objectInfo.DisplayName = to.String(group.GetDisplayName())
-			} else if app, ok := row.(models.Applicationable); ok {
-				objectInfo.Type = "application"
-				objectInfo.DisplayName = to.String(app.GetDisplayName())
-				objectInfo.ApplicationID = to.String(app.GetAppId())
-			} else if sp, ok := row.(models.ServicePrincipalable); ok {
-				objectInfo.Type = "serviceprincipal"
-				objectInfo.DisplayName = to.String(sp.GetDisplayName())
-				objectInfo.ApplicationID = to.String(sp.GetAppId())
-				objectInfo.ServicePrincipalType = to.String(sp.GetServicePrincipalType())
-
-				if strings.EqualFold(objectInfo.ServicePrincipalType, "ManagedIdentity") {
-					spAlternativeNames := sp.GetAlternativeNames()
-					if len(spAlternativeNames) >= 2 {
-						objectInfo.ManagedIdentity = spAlternativeNames[1]
-					}
-				}
-			}
+			// TODO
 
 			ret[objectInfo.ObjectID] = objectInfo
 

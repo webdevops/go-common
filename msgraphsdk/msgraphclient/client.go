@@ -19,7 +19,8 @@ import (
 
 type (
 	MsGraphClient struct {
-		cloud cloud.Configuration
+		cloud    cloud.Configuration
+		tenantID string
 
 		logger *log.Logger
 
@@ -32,9 +33,10 @@ type (
 )
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloud.Configuration, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloud.Configuration, tenantID string, logger *log.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
+	client.tenantID = tenantID
 
 	client.cacheTtl = 1 * time.Hour
 	client.cache = cache.New(60*time.Minute, 60*time.Second)
@@ -48,12 +50,12 @@ func NewMsGraphClient(cloudConfig cloud.Configuration, logger *log.Logger) *MsGr
 }
 
 // NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
-func NewMsGraphClientWithCloudName(cloudName string, logger *log.Logger) (*MsGraphClient, error) {
+func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *log.Logger) (*MsGraphClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
 		logger.Panic(err.Error())
 	}
-	return NewMsGraphClient(cloudConfig, logger), nil
+	return NewMsGraphClient(cloudConfig, tenantID, logger), nil
 }
 
 // ServiceClient returns msgraph service client

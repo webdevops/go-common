@@ -142,3 +142,8 @@ func (c *MsGraphClient) SetUserAgent(useragent string) {
 func (c *MsGraphClient) SetCacheTtl(ttl time.Duration) {
 	c.cacheTtl = ttl
 }
+
+// GetTenantID returns the current set TenantID
+func (c *MsGraphClient) GetTenantID() string {
+	return c.tenantID
+}

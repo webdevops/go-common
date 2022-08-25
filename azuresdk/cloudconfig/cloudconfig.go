@@ -16,7 +16,7 @@ func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
 	switch strings.ToLower(cloudName) {
 	// ----------------------------------------------------
 	// Azure Public cloud (default)
-	case "azurepublic", "azurepubliccloud":
+	case "azurepublic", "azurepubliccloud", "azurecloud":
 		config, err = cloud.AzurePublic, nil
 		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://graph.microsoft.com/",

@@ -19,7 +19,7 @@ import (
 
 type (
 	ArmClient struct {
-		cloud cloud.Configuration
+		cloud cloudconfig.CloudEnvironment
 
 		logger *log.Logger
 
@@ -35,7 +35,7 @@ type (
 )
 
 // NewArmClient creates new Azure SDK ARM client
-func NewArmClient(cloudConfig cloud.Configuration, logger *log.Logger) *ArmClient {
+func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) *ArmClient {
 	client := &ArmClient{}
 	client.cloud = cloudConfig
 
@@ -96,15 +96,20 @@ func (azureClient *ArmClient) createAuthorizer() (azcore.TokenCredential, error)
 	}
 }
 
-// GetCloud returns selected Azure cloud/environment configuration
-func (azureClient *ArmClient) GetCloud() cloud.Configuration {
-	return azureClient.cloud
+// GetCloudName returns selected Azure Environment name (eg AzurePublicCloud)
+func (azureClient *ArmClient) GetCloudName() cloudconfig.CloudName {
+	return azureClient.cloud.Name
+}
+
+// GetCloudConfig returns selected Azure cloud/environment configuration
+func (azureClient *ArmClient) GetCloudConfig() cloud.Configuration {
+	return azureClient.cloud.Configuration
 }
 
 // NewAzCoreClientOptions returns new client options for all arm clients
 func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 	clientOptions := azcore.ClientOptions{
-		Cloud:            azureClient.cloud,
+		Cloud:            azureClient.cloud.Configuration,
 		PerCallPolicies:  []policy.Policy{},
 		PerRetryPolicies: nil,
 	}
@@ -124,7 +129,7 @@ func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
 	clientOptions := arm.ClientOptions{
 		ClientOptions: policy.ClientOptions{
-			Cloud: azureClient.cloud,
+			Cloud: azureClient.cloud.Configuration,
 		},
 	}
 

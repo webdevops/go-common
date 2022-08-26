@@ -9,16 +9,24 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 )
 
-const MicrosoftGraph cloud.ServiceName = "microsoftGraph"
+type (
+	CloudEnvironment struct {
+		cloud.Configuration
+		Name CloudName
+	}
+)
 
 // NewCloudConfig creates a new cloud configuration object based on cloud name (eg. AzurePublicCloud)
-func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
+func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 	switch strings.ToLower(cloudName) {
 	// ----------------------------------------------------
 	// Azure Public cloud (default)
 	case "azurepublic", "azurepubliccloud", "azurecloud":
-		config, err = cloud.AzurePublic, nil
-		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+		config, err = CloudEnvironment{
+			Name:          AzurePublicCloud,
+			Configuration: cloud.AzurePublic,
+		}, nil
+		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://graph.microsoft.com/",
 			Endpoint: "https://graph.microsoft.com",
 		})
@@ -26,8 +34,11 @@ func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
 	// ----------------------------------------------------
 	// Azure China cloud
 	case "azurechina", "azurechinacloud":
-		config, err = cloud.AzureChina, nil
-		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+		config, err = CloudEnvironment{
+			Name:          AzureChinaCloud,
+			Configuration: cloud.AzureChina,
+		}, nil
+		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://microsoftgraph.chinaclouapi.cn/",
 			Endpoint: "https://microsoftgraph.chinaclouapi.cn",
 		})
@@ -35,8 +46,11 @@ func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
 	// ----------------------------------------------------
 	// Azure Government cloud
 	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
-		config, err = cloud.AzureGovernment, nil
-		injectServiceConfig(&config, MicrosoftGraph, cloud.ServiceConfiguration{
+		config, err = CloudEnvironment{
+			Name:          AzureGovernmentCloud,
+			Configuration: cloud.AzureGovernment,
+		}, nil
+		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://login.microsoftonline.us/",
 			Endpoint: "https://login.microsoftonline.us",
 		})
@@ -44,7 +58,15 @@ func NewCloudConfig(cloudName string) (config cloud.Configuration, err error) {
 	// ----------------------------------------------------
 	// Azure Private Cloud (onpremise, custom configuration via json)
 	case "azureprivate", "azurepprivatecloud":
-		config, err = createAzurePrivateCloudConfig()
+		config, err = CloudEnvironment{
+			Name: AzurePrivateCloud,
+		}, nil
+
+		if cloudConfig, privateCloudConfigErr := createAzurePrivateCloudConfig(); privateCloudConfigErr == nil {
+			config.Configuration = cloudConfig
+		} else {
+			err = privateCloudConfigErr
+		}
 
 	default:
 		err = fmt.Errorf(`unable to set Azure Cloud "%v", not valid`, cloudName)

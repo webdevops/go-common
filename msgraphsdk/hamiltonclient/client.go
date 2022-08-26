@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -19,7 +18,7 @@ import (
 
 type (
 	MsGraphClient struct {
-		cloud cloud.Configuration
+		cloud cloudconfig.CloudEnvironment
 
 		tenantID string
 
@@ -34,7 +33,7 @@ type (
 )
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloud.Configuration, tenantID string, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *log.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
 
@@ -84,7 +83,7 @@ func (c *MsGraphClient) createAuthorizer() *authWrapper.AuthorizerWrapper {
 	)
 	// azure authorizer
 
-	oauth, err := adal.NewOAuthConfig(c.cloud.Services[cloudconfig.MicrosoftGraph].Endpoint, c.tenantID)
+	oauth, err := adal.NewOAuthConfig(c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph].Endpoint, c.tenantID)
 	if err != nil {
 		c.logger.Panic(err)
 	}
@@ -95,13 +94,13 @@ func (c *MsGraphClient) createAuthorizer() *authWrapper.AuthorizerWrapper {
 	// azure authorizer
 	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
 	case "az", "cli", "azcli":
-		authorizer, err = auth.NewAuthorizerFromCLIWithResource(c.cloud.Services[cloudconfig.MicrosoftGraph].Endpoint)
+		authorizer, err = auth.NewAuthorizerFromCLIWithResource(c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph].Endpoint)
 		if err != nil {
 			c.logger.Panic(err)
 		}
 
 	default:
-		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(c.cloud.Services[cloudconfig.MicrosoftGraph].Endpoint)
+		authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph].Endpoint)
 		if err != nil {
 			c.logger.Panic(err)
 		}

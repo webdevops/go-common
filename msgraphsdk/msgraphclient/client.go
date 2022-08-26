@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
@@ -19,7 +18,7 @@ import (
 
 type (
 	MsGraphClient struct {
-		cloud    cloud.Configuration
+		cloud    cloudconfig.CloudEnvironment
 		tenantID string
 
 		logger *log.Logger
@@ -33,7 +32,7 @@ type (
 )
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloud.Configuration, tenantID string, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *log.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
 	client.tenantID = tenantID
@@ -102,7 +101,7 @@ func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequest
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.EnvironmentCredentialOptions{
 			ClientOptions: azcore.ClientOptions{
-				Cloud:            c.cloud,
+				Cloud:            c.cloud.Configuration,
 				PerCallPolicies:  nil,
 				PerRetryPolicies: nil,
 			},
@@ -125,7 +124,7 @@ func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequest
 
 	// set endpoint from cloudconfig
 	if c.cloud.Services != nil {
-		if serviceConfig, exists := c.cloud.Services[cloudconfig.MicrosoftGraph]; exists {
+		if serviceConfig, exists := c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph]; exists {
 			adapter.SetBaseUrl(serviceConfig.Endpoint + "/v1.0")
 		}
 	}

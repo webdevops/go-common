@@ -56,7 +56,7 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 		opts := getbyids.GetByIdsPostRequestBody{}
 		opts.SetIds(principalObjectIDChunkList)
 
-		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(&opts)
+		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(ctx, &opts, nil)
 		if err != nil {
 			return ret, err
 		}

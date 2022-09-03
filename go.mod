@@ -13,8 +13,8 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
 	github.com/manicminer/hamilton v0.47.1
 	github.com/manicminer/hamilton-autorest v0.2.0
-	github.com/microsoft/kiota-authentication-azure-go v0.4.0
-	github.com/microsoftgraph/msgraph-sdk-go v0.36.0
+	github.com/microsoft/kiota-authentication-azure-go v0.4.1
+	github.com/microsoftgraph/msgraph-sdk-go v0.37.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.13.0
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -50,9 +50,9 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/microsoft/kiota-abstractions-go v0.9.1 // indirect
 	github.com/microsoft/kiota-http-go v0.7.0 // indirect
-	github.com/microsoft/kiota-serialization-json-go v0.5.5 // indirect
-	github.com/microsoft/kiota-serialization-text-go v0.4.1 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go-core v0.27.0 // indirect
+	github.com/microsoft/kiota-serialization-json-go v0.5.6 // indirect
+	github.com/microsoft/kiota-serialization-text-go v0.4.2 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v0.28.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

@@ -14,7 +14,7 @@ require (
 	github.com/manicminer/hamilton v0.47.1
 	github.com/manicminer/hamilton-autorest v0.2.0
 	github.com/microsoft/kiota-authentication-azure-go v0.4.1
-	github.com/microsoftgraph/msgraph-sdk-go v0.37.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.38.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.13.0
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -36,7 +36,7 @@ require (
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.6.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cjlapao/common-go v0.0.25 // indirect
+	github.com/cjlapao/common-go v0.0.27 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
@@ -62,9 +62,9 @@ require (
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
+	golang.org/x/net v0.0.0-20220906165146-f3363e06e74c // indirect
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
+	golang.org/x/sys v0.0.0-20220906165534-d0df966e6959 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

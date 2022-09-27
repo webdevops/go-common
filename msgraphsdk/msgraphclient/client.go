@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
@@ -14,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
+	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 )
 
 type (
@@ -99,14 +101,10 @@ func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequest
 		}
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
-		opts := azidentity.EnvironmentCredentialOptions{
-			ClientOptions: azcore.ClientOptions{
-				Cloud:            c.cloud.Configuration,
-				PerCallPolicies:  nil,
-				PerRetryPolicies: nil,
-			},
+		opts := azidentity.DefaultAzureCredentialOptions{
+			ClientOptions: *c.NewAzCoreClientOptions(),
 		}
-		cred, err := azidentity.NewEnvironmentCredential(&opts)
+		cred, err := azidentity.NewDefaultAzureCredential(&opts)
 		if err != nil {
 			c.logger.Panic(err)
 		}
@@ -130,6 +128,25 @@ func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequest
 	}
 
 	return
+}
+
+// NewAzCoreClientOptions returns new client options for all arm clients
+func (c *MsGraphClient) NewAzCoreClientOptions() *azcore.ClientOptions {
+	clientOptions := azcore.ClientOptions{
+		Cloud:            c.cloud.Configuration,
+		PerCallPolicies:  []policy.Policy{},
+		PerRetryPolicies: nil,
+	}
+
+	// azure prometheus tracing
+	if tracing.TracingIsEnabled() {
+		clientOptions.PerRetryPolicies = append(
+			clientOptions.PerRetryPolicies,
+			tracing.NewTracingPolicy(),
+		)
+	}
+
+	return &clientOptions
 }
 
 // SetUserAgent set user agent for all API calls

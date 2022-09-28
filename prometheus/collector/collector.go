@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sync/atomic"
 	"time"
 
@@ -96,6 +97,12 @@ func (c *Collector) Start() error {
 	if c.scrapeTime != nil {
 		// scrape time execution
 		go func() {
+			// randomize collector start times
+			startTimeOffset := float64(5)
+			startTimeRandom := float64(5)
+			startupWaitTime := time.Duration((rand.Float64()*startTimeRandom)+startTimeOffset) * time.Second // #nosec:G404 random value only used for startup time
+			time.Sleep(startupWaitTime)
+
 			for {
 				c.collect()
 				time.Sleep(*c.scrapeTime)

@@ -82,7 +82,7 @@ func (c *Config) Validate() error {
 
 	for _, queryConfig := range c.Queries {
 		if err := queryConfig.Validate(); err != nil {
-			return fmt.Errorf("query \"%v\": %v", queryConfig.Metric, err)
+			return fmt.Errorf("query \"%v\": %w", queryConfig.Metric, err)
 		}
 	}
 
@@ -141,7 +141,7 @@ func (c *ConfigQueryMetricField) Validate() error {
 
 	for _, filter := range c.Filters {
 		if err := filter.Validate(); err != nil {
-			return fmt.Errorf("field \"%v\": %v", c.Name, err)
+			return fmt.Errorf("field \"%v\": %w", c.Name, err)
 		}
 	}
 

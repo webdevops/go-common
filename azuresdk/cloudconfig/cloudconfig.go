@@ -96,7 +96,7 @@ func createAzurePrivateCloudConfig() (cloud.Configuration, error) {
 		// cloud config via JSON file
 		data, err := os.ReadFile(val) // #nosec G304
 		if err != nil {
-			return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %v`, err.Error())
+			return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 		}
 		cloudConfigJson = data
 	}
@@ -106,7 +106,7 @@ func createAzurePrivateCloudConfig() (cloud.Configuration, error) {
 	}
 
 	if err := json.Unmarshal([]byte(cloudConfigJson), &cloudConfig); err != nil {
-		return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %v`, err.Error())
+		return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 	}
 
 	return cloudConfig, nil

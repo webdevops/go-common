@@ -3,6 +3,7 @@ package armclient
 import (
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -29,6 +30,10 @@ type (
 		subscriptionFilter []string
 
 		cacheAuthorizerTtl time.Duration
+
+		locks struct {
+			subscription sync.RWMutex
+		}
 
 		userAgent string
 	}
@@ -157,4 +162,17 @@ func (azureClient *ArmClient) SetCacheTtl(ttl time.Duration) {
 // SetSubscriptionFilter set subscription filter, other subscriptions will be ignored
 func (azureClient *ArmClient) SetSubscriptionFilter(subscriptionId ...string) {
 	azureClient.subscriptionFilter = subscriptionId
+}
+
+func (azureClient *ArmClient) cacheData(identifier string, callback func() (interface{}, error)) (interface{}, error) {
+	if v, ok := azureClient.cache.Get(identifier); ok {
+		return v, nil
+	}
+
+	result, err := callback()
+	if err == nil {
+		azureClient.cache.SetDefault(identifier, result)
+	}
+
+	return result, err
 }

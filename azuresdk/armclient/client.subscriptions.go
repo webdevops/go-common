@@ -33,23 +33,21 @@ func (azureClient *ArmClient) ListCachedSubscriptionsWithFilter(ctx context.Cont
 
 // ListCachedSubscriptions return cached list of Azure Subscriptions as map (key is subscription id)
 func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[string]*armsubscriptions.Subscription, error) {
-	cacheKey := "subscriptions"
-	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cacheData, ok := v.(map[string]*armsubscriptions.Subscription); ok {
-			return cacheData, nil
+	identifier := "subscriptions"
+	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+		azureClient.logger.Debug("updating cached Azure Subscription list")
+		list, err := azureClient.ListSubscriptions(ctx)
+		if err != nil {
+			return nil, err
 		}
-	}
-
-	azureClient.logger.Debug("updating cached Azure Subscription list")
-	list, err := azureClient.ListSubscriptions(ctx)
+		azureClient.logger.Debugf("found %v Azure Subscriptions", len(list))
+		return list, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	azureClient.logger.Debugf("found %v Azure Subscriptions", len(list))
 
-	azureClient.cache.Set(cacheKey, list, azureClient.cacheTtl)
-
-	return list, nil
+	return result.(map[string]*armsubscriptions.Subscription), nil
 }
 
 // ListSubscriptions return list of Azure Subscriptions as map (key is subscription id)

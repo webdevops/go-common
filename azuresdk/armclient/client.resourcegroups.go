@@ -10,23 +10,21 @@ import (
 
 // ListCachedResourceGroups return cached list of Azure ResourceGroups as map (key is name of ResourceGroup)
 func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
-	cacheKey := "resourcegroups:" + subscriptionID
-	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cacheData, ok := v.(map[string]*armresources.ResourceGroup); ok {
-			return cacheData, nil
+	identifier := "resourcegroups:" + subscriptionID
+	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+		azureClient.logger.WithField("subscriptionID", subscriptionID).Debug("updating cached Azure ResourceGroup list")
+		list, err := azureClient.ListResourceGroups(ctx, subscriptionID)
+		if err != nil {
+			return list, err
 		}
-	}
-
-	azureClient.logger.WithField("subscriptionID", subscriptionID).Debug("updating cached Azure ResourceGroup list")
-	list, err := azureClient.ListResourceGroups(ctx, subscriptionID)
+		azureClient.logger.WithField("subscriptionID", subscriptionID).Debugf("found %v Azure ResourceGroups", len(list))
+		return list, nil
+	})
 	if err != nil {
-		return list, err
+		return nil, err
 	}
-	azureClient.logger.WithField("subscriptionID", subscriptionID).Debugf("found %v Azure ResourceGroups", len(list))
 
-	azureClient.cache.Set(cacheKey, list, azureClient.cacheTtl)
-
-	return list, nil
+	return result.(map[string]*armresources.ResourceGroup), nil
 }
 
 // ListResourceGroups return list of Azure ResourceGroups as map (key is name of ResourceGroup)

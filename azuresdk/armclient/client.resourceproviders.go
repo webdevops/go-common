@@ -43,23 +43,21 @@ func (azureClient *ArmClient) IsResourceProviderRegistered(ctx context.Context, 
 
 // ListCachedResourceProviders return cached list of Azure Resource Providers as map (key is namespace)
 func (azureClient *ArmClient) ListCachedResourceProviders(ctx context.Context, subscriptionID string) (map[string]*armresources.Provider, error) {
-	cacheKey := "resourceproviders:" + subscriptionID
-	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cacheData, ok := v.(map[string]*armresources.Provider); ok {
-			return cacheData, nil
+	identifier := "resourceproviders:" + subscriptionID
+	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+		azureClient.logger.Debug("updating cached Azure ResourceProviders list")
+		list, err := azureClient.ListResourceProviders(ctx, subscriptionID)
+		if err != nil {
+			return nil, err
 		}
-	}
-
-	azureClient.logger.Debug("updating cached Azure ResourceProviders list")
-	list, err := azureClient.ListResourceProviders(ctx, subscriptionID)
+		azureClient.logger.WithField("subscriptionID", subscriptionID).Debugf("found %v Azure ResourceProviders", len(list))
+		return list, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	azureClient.logger.WithField("subscriptionID", subscriptionID).Debugf("found %v Azure ResourceProviders", len(list))
 
-	azureClient.cache.Set(cacheKey, list, azureClient.cacheTtl)
-
-	return list, nil
+	return result.(map[string]*armresources.Provider), nil
 }
 
 // ListResourceProviders return cached list of Azure Resource Providers as map (key is namespace)

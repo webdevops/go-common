@@ -11,10 +11,10 @@ require (
 	github.com/Azure/go-autorest/autorest v0.11.28
 	github.com/Azure/go-autorest/autorest/adal v0.9.21
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
-	github.com/manicminer/hamilton v0.47.1
+	github.com/manicminer/hamilton v0.49.0
 	github.com/manicminer/hamilton-autorest v0.2.0
 	github.com/microsoft/kiota-authentication-azure-go v0.4.1
-	github.com/microsoftgraph/msgraph-sdk-go v0.40.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.41.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.13.0
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -50,9 +50,9 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.2 // indirect
 	github.com/microsoft/kiota-abstractions-go v0.11.0 // indirect
 	github.com/microsoft/kiota-http-go v0.8.1 // indirect
-	github.com/microsoft/kiota-serialization-json-go v0.7.1 // indirect
+	github.com/microsoft/kiota-serialization-json-go v0.7.2 // indirect
 	github.com/microsoft/kiota-serialization-text-go v0.6.0 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go-core v0.28.1 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v0.29.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -62,9 +62,9 @@ require (
 	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/crypto v0.0.0-20220926161630-eccd6366d1be // indirect
-	golang.org/x/net v0.0.0-20220926192436-02166a98028e // indirect
+	golang.org/x/net v0.0.0-20220927171203-f486391704dc // indirect
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
-	golang.org/x/sys v0.0.0-20220926163933-8cfa568d3c25 // indirect
+	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

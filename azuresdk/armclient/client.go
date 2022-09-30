@@ -3,7 +3,6 @@ package armclient
 import (
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -30,10 +29,6 @@ type (
 		subscriptionFilter []string
 
 		cacheAuthorizerTtl time.Duration
-
-		locks struct {
-			subscription sync.RWMutex
-		}
 
 		userAgent string
 	}

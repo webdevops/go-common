@@ -156,7 +156,10 @@ func (c *Collector) collect() {
 		callbackList = append(callbackList, callback)
 	}
 
+	// ensure that metrics are written completely
+	// promhttp handler should wait for rlock
 	lock.Lock()
+	defer lock.Unlock()
 
 	// reset metric values
 	c.processor.Reset()
@@ -165,7 +168,6 @@ func (c *Collector) collect() {
 	for _, callback := range callbackList {
 		callback()
 	}
-	lock.Unlock()
 
 	if !panicDetected {
 		// reset panic counter after successful run without panics

@@ -156,6 +156,8 @@ func (c *Collector) collect() {
 		callbackList = append(callbackList, callback)
 	}
 
+	lock.Lock()
+
 	// reset metric values
 	c.processor.Reset()
 
@@ -163,6 +165,7 @@ func (c *Collector) collect() {
 	for _, callback := range callbackList {
 		callback()
 	}
+	lock.Unlock()
 
 	if !panicDetected {
 		// reset panic counter after successful run without panics

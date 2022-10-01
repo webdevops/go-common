@@ -8,10 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
         with:
-          args: ./...
+          swap-size-gb: 12
 
       - name: Run Golangci lint
         uses: golangci/golangci-lint-action@v2

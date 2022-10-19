@@ -2,11 +2,16 @@ package armclient
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 
 	"github.com/webdevops/go-common/utils/to"
+)
+
+const (
+	CacheIdentifierResourceProviders = "resourceproviders:%s"
 )
 
 // GetResourceProvider return Azure Resource Providers by subscriptionID and providerNamespace
@@ -43,8 +48,7 @@ func (azureClient *ArmClient) IsResourceProviderRegistered(ctx context.Context, 
 
 // ListCachedResourceProviders return cached list of Azure Resource Providers as map (key is namespace)
 func (azureClient *ArmClient) ListCachedResourceProviders(ctx context.Context, subscriptionID string) (map[string]*armresources.Provider, error) {
-	identifier := "resourceproviders:" + subscriptionID
-	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceProviders, subscriptionID), func() (interface{}, error) {
 		azureClient.logger.Debug("updating cached Azure ResourceProviders list")
 		list, err := azureClient.ListResourceProviders(ctx, subscriptionID)
 		if err != nil {
@@ -84,6 +88,9 @@ func (azureClient *ArmClient) ListResourceProviders(ctx context.Context, subscri
 			list[to.StringLower(provider.Namespace)] = provider
 		}
 	}
+
+	// update cache
+	azureClient.cache.SetDefault(fmt.Sprintf(CacheIdentifierResourceProviders, subscriptionID), list)
 
 	return list, nil
 }

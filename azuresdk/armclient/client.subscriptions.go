@@ -7,6 +7,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 )
 
+const (
+	CacheIdentifierSubscriptions = "subscriptions"
+)
+
 // ListCachedSubscriptionsWithFilter return list of subscription with filter by subscription ids
 func (azureClient *ArmClient) ListCachedSubscriptionsWithFilter(ctx context.Context, subscriptionFilter ...string) (map[string]*armsubscriptions.Subscription, error) {
 	availableSubscriptions, err := azureClient.ListCachedSubscriptions(ctx)
@@ -33,8 +37,7 @@ func (azureClient *ArmClient) ListCachedSubscriptionsWithFilter(ctx context.Cont
 
 // ListCachedSubscriptions return cached list of Azure Subscriptions as map (key is subscription id)
 func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[string]*armsubscriptions.Subscription, error) {
-	identifier := "subscriptions"
-	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+	result, err := azureClient.cacheData(CacheIdentifierSubscriptions, func() (interface{}, error) {
 		azureClient.logger.Debug("updating cached Azure Subscription list")
 		list, err := azureClient.ListSubscriptions(ctx)
 		if err != nil {
@@ -84,6 +87,9 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 			}
 		}
 	}
+
+	// update cache
+	azureClient.cache.SetDefault(CacheIdentifierSubscriptions, list)
 
 	return list, nil
 }

@@ -2,16 +2,20 @@ package armclient
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 
 	"github.com/webdevops/go-common/utils/to"
 )
 
+const (
+	CacheIdentifierResourceGroups = "resourcegroups:%s"
+)
+
 // ListCachedResourceGroups return cached list of Azure ResourceGroups as map (key is name of ResourceGroup)
 func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
-	identifier := "resourcegroups:" + subscriptionID
-	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
+	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceGroups, subscriptionID), func() (interface{}, error) {
 		azureClient.logger.WithField("subscriptionID", subscriptionID).Debug("updating cached Azure ResourceGroup list")
 		list, err := azureClient.ListResourceGroups(ctx, subscriptionID)
 		if err != nil {
@@ -51,6 +55,9 @@ func (azureClient *ArmClient) ListResourceGroups(ctx context.Context, subscripti
 			list[to.StringLower(resourceGroup.Name)] = resourceGroup
 		}
 	}
+
+	// update cache
+	azureClient.cache.SetDefault(fmt.Sprintf(CacheIdentifierResourceGroups, subscriptionID), list)
 
 	return list, nil
 }

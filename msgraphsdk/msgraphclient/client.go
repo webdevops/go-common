@@ -1,19 +1,17 @@
 package msgraphclient
 
 import (
-	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/patrickmn/go-cache"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 )
@@ -82,42 +80,19 @@ func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
 
 // createRequestAdapter returns new msgraph request adapter
 func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequestAdapter) {
-	// azure authorizer
-	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
-	case "az", "cli", "azcli":
-		cred, err := azidentity.NewAzureCLICredential(nil)
-		if err != nil {
-			c.logger.Panic(err)
-		}
+	cred, err := azidentity.NewAzCredential(c.NewAzCoreClientOptions())
+	if err != nil {
+		c.logger.Panic(err)
+	}
 
-		auth, err := a.NewAzureIdentityAuthenticationProvider(cred)
-		if err != nil {
-			c.logger.Panic(err)
-		}
+	auth, err := a.NewAzureIdentityAuthenticationProvider(cred)
+	if err != nil {
+		c.logger.Panic(err)
+	}
 
-		adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
-		if err != nil {
-			c.logger.Panic(err)
-		}
-	default:
-		// general azure authentication (env vars, service principal, msi, ...)
-		opts := azidentity.DefaultAzureCredentialOptions{
-			ClientOptions: *c.NewAzCoreClientOptions(),
-		}
-		cred, err := azidentity.NewDefaultAzureCredential(&opts)
-		if err != nil {
-			c.logger.Panic(err)
-		}
-
-		auth, err := a.NewAzureIdentityAuthenticationProvider(cred)
-		if err != nil {
-			c.logger.Panic(err)
-		}
-
-		adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
-		if err != nil {
-			c.logger.Panic(err)
-		}
+	adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
+	if err != nil {
+		c.logger.Panic(err)
 	}
 
 	// set endpoint from cloudconfig

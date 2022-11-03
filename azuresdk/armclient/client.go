@@ -1,18 +1,16 @@
 package armclient
 
 import (
-	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	cache "github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 )
@@ -69,7 +67,7 @@ func (azureClient *ArmClient) GetCred() azcore.TokenCredential {
 		}
 	}
 
-	cred, err := azureClient.createAuthorizer()
+	cred, err := azidentity.NewAzCredential(azureClient.NewAzCoreClientOptions())
 	if err != nil {
 		panic(err)
 	}
@@ -77,23 +75,6 @@ func (azureClient *ArmClient) GetCred() azcore.TokenCredential {
 	azureClient.cache.Set(cacheKey, cred, azureClient.cacheAuthorizerTtl)
 
 	return cred
-}
-
-// createAuthorizer creates new azure credential authorizer based on azure environment
-func (azureClient *ArmClient) createAuthorizer() (azcore.TokenCredential, error) {
-	// azure authorizer
-	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
-	case "az", "cli", "azcli":
-		// azurecli authentication
-		opts := azidentity.AzureCLICredentialOptions{}
-		return azidentity.NewAzureCLICredential(&opts)
-	default:
-		// general azure authentication (env vars, service principal, msi, ...)
-		opts := azidentity.DefaultAzureCredentialOptions{
-			ClientOptions: *azureClient.NewAzCoreClientOptions(),
-		}
-		return azidentity.NewDefaultAzureCredential(&opts)
-	}
 }
 
 // GetCloudName returns selected Azure Environment name (eg AzurePublicCloud)

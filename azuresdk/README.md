@@ -27,6 +27,20 @@ Hint: please also check [microsoft azure-sdk documentation](https://docs.microso
 To enable authentication via AzureCLI set `AZURE_AUTH=az` and the token is fetched from Azure CLI.
 For this method the `az` binary must be available inside the container/environment.
 
+#### WorkloadIdentity/Federation authentication (beta)
+
+To enable authentication via WorkloadIdentity/Federation set `AZURE_AUTH=federation`.
+Following environment variables needs to be set (automatically set via workloadidentity in AKS clusters):
+
+| Variable name                  | Value                                                                              |
+|--------------------------------|------------------------------------------------------------------------------------|
+| `AZURE_AUTHORITY_HOST`         | The Azure Active Directory (AAD) endpoint.                                         |
+| `AZURE_CLIENT_ID`              | The client ID of the AAD application or user-assigned managed identity.            |
+| `AZURE_TENANT_ID`              | The tenant ID of the registered AAD application or user-assigned managed identity. |
+| `AZURE_FEDERATED_TOKEN_FILE`   | The path of the projected service account token file.                              |
+
+Will be integrated in azidentiy from azure-sdk-for-go in 1.3.0
+
 ### Azure Cloud/Environment support
 
 | `AZURE_ENVIRONMENT`    | Description                                                                                  |

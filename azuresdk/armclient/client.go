@@ -26,6 +26,8 @@ type (
 
 		subscriptionFilter []string
 
+		cred *azcore.TokenCredential
+
 		cacheAuthorizerTtl time.Duration
 
 		userAgent string
@@ -60,21 +62,15 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 
 // GetCred returns Azure ARM credential
 func (azureClient *ArmClient) GetCred() azcore.TokenCredential {
-	cacheKey := "authorizer"
-	if v, ok := azureClient.cache.Get(cacheKey); ok {
-		if cred, ok := v.(azcore.TokenCredential); ok {
-			return cred
+	if azureClient.cred == nil {
+		cred, err := azidentity.NewAzCredential(azureClient.NewAzCoreClientOptions())
+		if err != nil {
+			panic(err)
 		}
+		azureClient.cred = &cred
 	}
 
-	cred, err := azidentity.NewAzCredential(azureClient.NewAzCoreClientOptions())
-	if err != nil {
-		panic(err)
-	}
-
-	azureClient.cache.Set(cacheKey, cred, azureClient.cacheAuthorizerTtl)
-
-	return cred
+	return *azureClient.cred
 }
 
 // GetCloudName returns selected Azure Environment name (eg AzurePublicCloud)

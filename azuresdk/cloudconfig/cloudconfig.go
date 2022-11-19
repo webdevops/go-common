@@ -30,6 +30,10 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Audience: "https://graph.microsoft.com/",
 			Endpoint: "https://graph.microsoft.com",
 		})
+		injectServiceConfig(&config.Configuration, ServiceNameLogAnalyticsWorkspace, cloud.ServiceConfiguration{
+			Audience: "https://api.loganalytics.io/",
+			Endpoint: "https://api.loganalytics.io",
+		})
 
 	// ----------------------------------------------------
 	// Azure China cloud
@@ -42,6 +46,10 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Audience: "https://microsoftgraph.chinaclouapi.cn/",
 			Endpoint: "https://microsoftgraph.chinaclouapi.cn",
 		})
+		injectServiceConfig(&config.Configuration, ServiceNameLogAnalyticsWorkspace, cloud.ServiceConfiguration{
+			Audience: "https://api.loganalytics.azure.cn/",
+			Endpoint: "https://api.loganalytics.azure.cn",
+		})
 
 	// ----------------------------------------------------
 	// Azure Government cloud
@@ -53,6 +61,10 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://login.microsoftonline.us/",
 			Endpoint: "https://login.microsoftonline.us",
+		})
+		injectServiceConfig(&config.Configuration, ServiceNameLogAnalyticsWorkspace, cloud.ServiceConfiguration{
+			Audience: "https://api.loganalytics.us/",
+			Endpoint: "https://api.loganalytics.us",
 		})
 
 	// ----------------------------------------------------

@@ -16,5 +16,6 @@ const (
 	AzurePrivateCloud    = CloudName("AzurePrivateCloud")
 
 	// Service name
-	ServiceNameMicrosoftGraph cloud.ServiceName = "microsoftGraph"
+	ServiceNameMicrosoftGraph        cloud.ServiceName = "microsoftGraph"
+	ServiceNameLogAnalyticsWorkspace cloud.ServiceName = "logAnalytics"
 )

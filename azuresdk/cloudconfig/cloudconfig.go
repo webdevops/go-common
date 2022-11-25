@@ -43,8 +43,8 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Configuration: cloud.AzureChina,
 		}, nil
 		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
-			Audience: "https://microsoftgraph.chinaclouapi.cn/",
-			Endpoint: "https://microsoftgraph.chinaclouapi.cn",
+			Audience: "https://microsoftgraph.chinacloudapi.cn/",
+			Endpoint: "https://microsoftgraph.chinacloudapi.cn",
 		})
 		injectServiceConfig(&config.Configuration, ServiceNameLogAnalyticsWorkspace, cloud.ServiceConfiguration{
 			Audience: "https://api.loganalytics.azure.cn/",

@@ -13,7 +13,7 @@ require (
 	github.com/manicminer/hamilton v0.51.0
 	github.com/manicminer/hamilton-autorest v0.3.0
 	github.com/microsoft/kiota-authentication-azure-go v0.5.0
-	github.com/microsoftgraph/msgraph-sdk-go v0.46.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.47.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.14.0
 	github.com/remeh/sizedwaitgroup v1.0.0

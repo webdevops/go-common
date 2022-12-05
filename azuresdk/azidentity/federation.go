@@ -16,10 +16,6 @@ type workloadIdentityCredential struct {
 	lastRead        time.Time
 }
 
-type workloadIdentityCredentialOptions struct {
-	azcore.ClientOptions
-}
-
 func (w *workloadIdentityCredential) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
 	return w.cred.GetToken(ctx, opts)
 }

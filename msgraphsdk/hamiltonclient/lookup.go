@@ -66,7 +66,7 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		for _, row := range *result {
 			objectInfo := &DirectoryObject{
-				ObjectID: to.String(row.ID),
+				ObjectID: to.String(row.ObjectId),
 				Type:     "unknown",
 			}
 

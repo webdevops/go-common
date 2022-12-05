@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/microsoftgraph/msgraph-sdk-go/directoryobjects/getbyids"
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
 
 	"github.com/webdevops/go-common/utils/to"
@@ -53,7 +52,7 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		principalObjectIDChunkList := lookupPrincipalObjectIDList[i:end]
 
-		opts := getbyids.GetByIdsPostRequestBody{}
+		opts := models.DirectoryObjectsGetByIdsPostRequestBody{}
 		opts.SetIds(principalObjectIDChunkList)
 
 		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(ctx, &opts, nil)

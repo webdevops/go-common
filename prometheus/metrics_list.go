@@ -30,6 +30,10 @@ func NewMetricsList() *MetricList {
 
 func (m *MetricList) Init() {
 	m.mux = &sync.Mutex{}
+
+	if m.List == nil {
+		m.List = []MetricRow{}
+	}
 }
 
 func (m *MetricList) SetCache(instance *cache.Cache) {
@@ -39,6 +43,11 @@ func (m *MetricList) SetCache(instance *cache.Cache) {
 func (m *MetricList) append(row MetricRow) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
+
+	if m.List == nil {
+		m.List = []MetricRow{}
+	}
+
 	m.List = append(m.List, row)
 }
 
@@ -122,6 +131,11 @@ func (m *MetricList) Reset() {
 func (m *MetricList) GetList() []MetricRow {
 	m.mux.Lock()
 	defer m.mux.Unlock()
+
+	if m.List == nil {
+		m.List = []MetricRow{}
+	}
+
 	return m.List
 }
 

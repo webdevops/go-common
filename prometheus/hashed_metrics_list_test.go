@@ -41,7 +41,7 @@ func hashedMetricsListTestList(t *testing.T, m *HashedMetricList) {
 
 	for _, v := range m.GetList() {
 		row := v
-		switch row.labels["key"] {
+		switch row.Labels["key"] {
 		case "info":
 			infoMetric = &row
 		case "test":

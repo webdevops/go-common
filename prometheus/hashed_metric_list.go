@@ -11,7 +11,7 @@ import (
 )
 
 type HashedMetricList struct {
-	list map[string]*MetricRow
+	List map[string]*MetricRow
 	mux  *sync.Mutex
 
 	metricsCache *cache.Cache
@@ -41,7 +41,7 @@ func (m *HashedMetricList) LoadFromCache(key string) bool {
 
 		if val, fetched := m.metricsCache.Get(key); fetched {
 			// loaded from cache
-			m.list = val.(map[string]*MetricRow)
+			m.List = val.(map[string]*MetricRow)
 			return true
 		}
 	}
@@ -60,7 +60,7 @@ func (m *HashedMetricList) StoreToCache(key string, duration time.Duration) erro
 func (m *HashedMetricList) Reset() {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.list = map[string]*MetricRow{}
+	m.List = map[string]*MetricRow{}
 }
 
 func (m *HashedMetricList) GetList() []MetricRow {
@@ -68,7 +68,7 @@ func (m *HashedMetricList) GetList() []MetricRow {
 	defer m.mux.Unlock()
 
 	list := []MetricRow{}
-	for _, row := range m.list {
+	for _, row := range m.List {
 		list = append(list, *row)
 	}
 
@@ -84,24 +84,24 @@ func (m *HashedMetricList) Inc(labels prometheus.Labels) {
 		metricKey = metricKey + key + "=" + value + ";"
 	}
 	hashKey := fmt.Sprintf("%x", sha256.Sum256([]byte(metricKey)))
-	if _, exists := m.list[hashKey]; exists {
-		m.list[hashKey].value++
+	if _, exists := m.List[hashKey]; exists {
+		m.List[hashKey].Value++
 	} else {
-		m.list[hashKey] = &MetricRow{
-			labels: labels,
-			value:  1,
+		m.List[hashKey] = &MetricRow{
+			Labels: labels,
+			Value:  1,
 		}
 	}
 }
 
 func (m *HashedMetricList) GaugeSet(gauge *prometheus.GaugeVec) {
 	for _, metric := range m.GetList() {
-		gauge.With(metric.labels).Set(metric.value)
+		gauge.With(metric.Labels).Set(metric.Value)
 	}
 }
 
 func (m *HashedMetricList) CounterAdd(counter *prometheus.CounterVec) {
 	for _, metric := range m.GetList() {
-		counter.With(metric.labels).Add(metric.value)
+		counter.With(metric.Labels).Add(metric.Value)
 	}
 }

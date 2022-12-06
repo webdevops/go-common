@@ -28,13 +28,13 @@ func Test_MetricsListCache(t *testing.T) {
 	}
 	expectListCount(t, m, 5)
 
-	// load cache into existing list
+	// load cache into existing List
 	metricsListTestList(t, m)
 	m.LoadFromCache("test")
 	expectListCount(t, m, 5)
 	metricsListTestList(t, m)
 
-	// load cache into new list
+	// load cache into new List
 	m2 := NewMetricsList()
 	m2.SetCache(metricsCache)
 	expectListCount(t, m2, 0)
@@ -50,11 +50,11 @@ func Test_MetricsListCache(t *testing.T) {
 	time.Sleep(time.Duration(1 * time.Second))
 	time.Sleep(time.Duration(1 * time.Second))
 
-	// load expired cache into existing list
+	// load expired cache into existing List
 	m2.LoadFromCache("test")
 	expectListCount(t, m2, 0)
 
-	// load expired cache into new list
+	// load expired cache into new List
 	m3 := NewMetricsList()
 	m3.SetCache(metricsCache)
 	expectListCount(t, m3, 0)
@@ -117,7 +117,7 @@ func expectListCount(t *testing.T, m *MetricList, expectedCount int) {
 func expectMetricRowLabel(t *testing.T, m MetricRow, expectedLabel, expectedValue string) {
 	t.Helper()
 
-	for label, value := range m.labels {
+	for label, value := range m.Labels {
 		if label == expectedLabel && value == expectedValue {
 			return
 		}
@@ -129,7 +129,7 @@ func expectMetricRowLabel(t *testing.T, m MetricRow, expectedLabel, expectedValu
 func expectMetricRowValue(t *testing.T, m MetricRow, expectedValue float64) {
 	t.Helper()
 
-	if m.value != expectedValue {
-		t.Errorf("Expected metric value: %v  Actual metric value: %v", expectedValue, m.value)
+	if m.Value != expectedValue {
+		t.Errorf("Expected metric value: %v  Actual metric value: %v", expectedValue, m.Value)
 	}
 }

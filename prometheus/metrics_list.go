@@ -11,12 +11,12 @@ import (
 )
 
 type MetricRow struct {
-	labels prometheus.Labels
-	value  float64
+	Labels prometheus.Labels
+	Value  float64
 }
 
 type MetricList struct {
-	list []MetricRow
+	List []MetricRow
 	mux  *sync.Mutex
 
 	metricsCache *cache.Cache
@@ -39,7 +39,7 @@ func (m *MetricList) SetCache(instance *cache.Cache) {
 func (m *MetricList) append(row MetricRow) {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.list = append(m.list, row)
+	m.List = append(m.List, row)
 }
 
 func (m *MetricList) LoadFromCache(key string) bool {
@@ -51,7 +51,7 @@ func (m *MetricList) LoadFromCache(key string) bool {
 
 		if val, fetched := m.metricsCache.Get(key); fetched {
 			// loaded from cache
-			m.list = val.([]MetricRow)
+			m.List = val.([]MetricRow)
 			return true
 		}
 	}
@@ -67,28 +67,28 @@ func (m *MetricList) StoreToCache(key string, duration time.Duration) error {
 }
 
 func (m *MetricList) Add(labels prometheus.Labels, value float64) {
-	m.append(MetricRow{labels: labels, value: value})
+	m.append(MetricRow{Labels: labels, Value: value})
 }
 
 func (m *MetricList) AddInfo(labels prometheus.Labels) {
-	m.append(MetricRow{labels: labels, value: 1})
+	m.append(MetricRow{Labels: labels, Value: 1})
 }
 
 func (m *MetricList) AddIfNotNil(labels prometheus.Labels, value *float64) {
 	if value != nil {
-		m.append(MetricRow{labels: labels, value: *value})
+		m.append(MetricRow{Labels: labels, Value: *value})
 	}
 }
 
 func (m *MetricList) AddIfNotZero(labels prometheus.Labels, value float64) {
 	if value != 0 {
-		m.append(MetricRow{labels: labels, value: value})
+		m.append(MetricRow{Labels: labels, Value: value})
 	}
 }
 
 func (m *MetricList) AddIfGreaterZero(labels prometheus.Labels, value float64) {
 	if value > 0 {
-		m.append(MetricRow{labels: labels, value: value})
+		m.append(MetricRow{Labels: labels, Value: value})
 	}
 }
 
@@ -96,12 +96,12 @@ func (m *MetricList) AddTime(labels prometheus.Labels, value time.Time) {
 	timeValue := to.UnixTime(value)
 
 	if timeValue > 0 {
-		m.append(MetricRow{labels: labels, value: timeValue})
+		m.append(MetricRow{Labels: labels, Value: timeValue})
 	}
 }
 
 func (m *MetricList) AddDuration(labels prometheus.Labels, value time.Duration) {
-	m.append(MetricRow{labels: labels, value: value.Seconds()})
+	m.append(MetricRow{Labels: labels, Value: value.Seconds()})
 }
 
 func (m *MetricList) AddBool(labels prometheus.Labels, state bool) {
@@ -110,31 +110,31 @@ func (m *MetricList) AddBool(labels prometheus.Labels, state bool) {
 		value = 1
 	}
 
-	m.append(MetricRow{labels: labels, value: value})
+	m.append(MetricRow{Labels: labels, Value: value})
 }
 
 func (m *MetricList) Reset() {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	m.list = []MetricRow{}
+	m.List = []MetricRow{}
 }
 
 func (m *MetricList) GetList() []MetricRow {
 	m.mux.Lock()
 	defer m.mux.Unlock()
-	return m.list
+	return m.List
 }
 
 func (m *MetricList) GaugeSet(gauge *prometheus.GaugeVec) {
 	for _, metric := range m.GetList() {
-		gauge.With(metric.labels).Set(metric.value)
+		gauge.With(metric.Labels).Set(metric.Value)
 	}
 }
 
 func (m *MetricList) GaugeSetInc(gauge *prometheus.GaugeVec) {
 	for _, metric := range m.GetList() {
-		if metricGauge, err := gauge.GetMetricWith(metric.labels); err == nil {
-			metricGauge.Add(metric.value)
+		if metricGauge, err := gauge.GetMetricWith(metric.Labels); err == nil {
+			metricGauge.Add(metric.Value)
 		} else {
 			panic(err)
 		}
@@ -143,18 +143,18 @@ func (m *MetricList) GaugeSetInc(gauge *prometheus.GaugeVec) {
 
 func (m *MetricList) SummarySet(summary *prometheus.SummaryVec) {
 	for _, metric := range m.GetList() {
-		summary.With(metric.labels).Observe(metric.value)
+		summary.With(metric.Labels).Observe(metric.Value)
 	}
 }
 
 func (m *MetricList) HistogramSet(histogram *prometheus.HistogramVec) {
 	for _, metric := range m.GetList() {
-		histogram.With(metric.labels).Observe(metric.value)
+		histogram.With(metric.Labels).Observe(metric.Value)
 	}
 }
 
 func (m *MetricList) CounterAdd(counter *prometheus.CounterVec) {
 	for _, metric := range m.GetList() {
-		counter.With(metric.labels).Add(metric.value)
+		counter.With(metric.Labels).Add(metric.Value)
 	}
 }

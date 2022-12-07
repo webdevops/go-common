@@ -197,6 +197,9 @@ func (c *Collector) collectionFinish() {
 	c.lastScrapeDuration = &duration
 
 	if c.logger != nil {
-		c.logger.WithField("duration", c.lastScrapeDuration.Seconds()).Info("finished metrics collection")
+		c.logger.WithFields(log.Fields{
+			"duration": c.lastScrapeDuration.Seconds(),
+			"nextRun":  time.Now().Add(*c.sleepTime),
+		}).Info("finished metrics collection")
 	}
 }

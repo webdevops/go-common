@@ -200,6 +200,6 @@ func (c *Collector) collectionFinish() {
 		c.logger.WithFields(log.Fields{
 			"duration": c.lastScrapeDuration.Seconds(),
 			"nextRun":  time.Now().Add(*c.sleepTime).UTC(),
-		}).Info("finished metrics collection")
+		}).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 	}
 }

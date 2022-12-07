@@ -18,6 +18,7 @@ type Collector struct {
 	context context.Context
 
 	scrapeTime *time.Duration
+	sleepTime  *time.Duration
 	cronSpec   *string
 
 	cron *cron.Cron
@@ -72,6 +73,10 @@ func (c *Collector) SetScapeTime(scrapeTime time.Duration) {
 	c.scrapeTime = &scrapeTime
 }
 
+func (c *Collector) SetNextSleepDuration(sleepDuration time.Duration) {
+	c.sleepTime = &sleepDuration
+}
+
 func (c *Collector) SetContext(ctx context.Context) {
 	c.context = ctx
 }
@@ -104,8 +109,9 @@ func (c *Collector) Start() error {
 			time.Sleep(startupWaitTime)
 
 			for {
+				c.SetNextSleepDuration(*c.scrapeTime)
 				c.collect()
-				time.Sleep(*c.scrapeTime)
+				time.Sleep(*c.sleepTime)
 			}
 		}()
 	} else if c.cronSpec != nil {

@@ -15,7 +15,7 @@ type (
 	MetricList struct {
 		*prometheusCommon.MetricList
 
-		vec interface{}
+		vec   interface{}
 		reset bool
 	}
 )

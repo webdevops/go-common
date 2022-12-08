@@ -11,7 +11,7 @@ import (
 )
 
 type HashedMetricList struct {
-	List map[string]*MetricRow
+	List map[string]*MetricRow `json:"list"`
 	mux  *sync.Mutex
 
 	metricsCache *cache.Cache

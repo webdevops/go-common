@@ -11,12 +11,12 @@ import (
 )
 
 type MetricRow struct {
-	Labels prometheus.Labels
-	Value  float64
+	Labels prometheus.Labels `json:"labels"`
+	Value  float64           `json:"value"`
 }
 
 type MetricList struct {
-	List []MetricRow
+	List []MetricRow `json:"list"`
 	mux  *sync.Mutex
 
 	metricsCache *cache.Cache

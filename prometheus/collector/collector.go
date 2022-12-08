@@ -2,14 +2,20 @@ package collector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
+
+	prometheusCommon "github.com/webdevops/go-common/prometheus"
 )
 
 type Collector struct {
@@ -25,12 +31,19 @@ type Collector struct {
 
 	lastScrapeDuration  *time.Duration
 	lastScrapeTime      *time.Time
+	nextScrapeTime      *time.Time
 	collectionStartTime time.Time
+
+	cache               *string
+	cacheRestoreEnabled bool
 
 	panic struct {
 		threshold int64
 		counter   int64
 	}
+
+	registry *prometheus.Registry
+	metrics  *Metrics
 
 	concurrency int
 	waitGroup   *sizedwaitgroup.SizedWaitGroup
@@ -44,10 +57,12 @@ func New(name string, processor ProcessorInterface, logger *log.Logger) *Collect
 	c := &Collector{}
 	c.context = context.Background()
 	c.Name = name
+	c.metrics = NewMetrics()
 	c.processor = processor
 	c.concurrency = -1
 	c.panic.threshold = 5
 	c.panic.counter = 0
+	c.cacheRestoreEnabled = true
 	if logger != nil {
 		c.logger = logger.WithFields(log.Fields{
 			"collector": name,
@@ -85,12 +100,36 @@ func (c *Collector) SetConcurrency(concurrency int) {
 	c.concurrency = concurrency
 }
 
+func (c *Collector) EnableCache(cache string) {
+	c.cache = &cache
+}
+
+func (c *Collector) SetCache(cache *string) {
+	c.cache = cache
+}
+
+func (c *Collector) DisableCache() {
+	c.cache = nil
+}
+
+func (c *Collector) SetPrometheusRegistry(registry *prometheus.Registry) {
+	c.registry = registry
+}
+
+func (c *Collector) GetPrometheusRegistry() *prometheus.Registry {
+	return c.registry
+}
+
 func (c *Collector) GetLastScrapeDuration() *time.Duration {
 	return c.lastScrapeDuration
 }
 
 func (c *Collector) GetLastScapeTime() *time.Time {
 	return c.lastScrapeTime
+}
+
+func (c *Collector) GetNextScrapeTime() *time.Time {
+	return c.nextScrapeTime
 }
 
 func (c *Collector) Start() error {
@@ -109,57 +148,83 @@ func (c *Collector) Start() error {
 			time.Sleep(startupWaitTime)
 
 			for {
-				c.SetNextSleepDuration(*c.scrapeTime)
-				c.collect()
+				c.run()
 				time.Sleep(*c.sleepTime)
 			}
 		}()
 	} else if c.cronSpec != nil {
 		// cron execution
-		return c.cron.AddFunc(*c.cronSpec, c.collect)
+		return c.cron.AddFunc(*c.cronSpec, c.run)
 	}
 	return nil
 }
 
-func (c *Collector) collect() {
+func (c *Collector) run() {
+	// set next sleep duration (automatic calculation, can be overwritten by collect)
+	c.SetNextSleepDuration(*c.scrapeTime)
+
+	// cleanup internal metric lists (to ensure clean metric lists)
+	c.cleanupMetricLists()
+
+	// start collection
 	c.collectionStart()
-	panicDetected := false
 
-	callbackChannel := make(chan func())
+	// try restore from cache (first run only)
+	if c.collectionRestoreCache() {
+		// metrics restored from cache, do not collect them
+		c.collectRun(false)
+	} else {
+		// metrics could not be restored from cache, start collect run
+		c.collectRun(true)
+		c.collectionSaveCache()
+	}
+	// cleanup internal metric lists (reduce memory load)
+	c.cleanupMetricLists()
 
-	go func() {
-		finished := false
-		defer func() {
-			close(callbackChannel)
+	// finish run and calculate next run
+	c.collectionFinish()
+}
 
-			if !finished {
-				panicDetected = true
-				atomic.AddInt64(&c.panic.counter, 1)
-				panicCounter := atomic.LoadInt64(&c.panic.counter)
-				if c.panic.threshold == -1 || panicCounter <= c.panic.threshold {
-					if err := recover(); err != nil {
-						switch v := err.(type) {
-						case *log.Entry:
-							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Message)
-						case error:
-							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Error())
-						default:
-							c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v)
+func (c *Collector) collectRun(doCollect bool) {
+	var panicDetected bool
+	var callbackList []func()
+
+	if doCollect {
+		callbackChannel := make(chan func())
+
+		go func() {
+			finished := false
+			defer func() {
+				close(callbackChannel)
+
+				if !finished {
+					panicDetected = true
+					atomic.AddInt64(&c.panic.counter, 1)
+					panicCounter := atomic.LoadInt64(&c.panic.counter)
+					if c.panic.threshold == -1 || panicCounter <= c.panic.threshold {
+						if err := recover(); err != nil {
+							switch v := err.(type) {
+							case *log.Entry:
+								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Message)
+							case error:
+								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Error())
+							default:
+								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v)
+							}
+
 						}
-
 					}
 				}
-			}
+			}()
+
+			c.processor.Collect(callbackChannel)
+			c.waitGroup.Wait()
+			finished = true
 		}()
 
-		c.processor.Collect(callbackChannel)
-		c.waitGroup.Wait()
-		finished = true
-	}()
-
-	var callbackList []func()
-	for callback := range callbackChannel {
-		callbackList = append(callbackList, callback)
+		for callback := range callbackChannel {
+			callbackList = append(callbackList, callback)
+		}
 	}
 
 	// ensure that metrics are written completely
@@ -170,17 +235,170 @@ func (c *Collector) collect() {
 	// reset metric values
 	c.processor.Reset()
 
+	// reset first
+	for _, metric := range c.metrics.List {
+		if metric.reset {
+			switch vec := metric.vec.(type) {
+			case *prometheus.GaugeVec:
+				vec.Reset()
+			case *prometheus.HistogramVec:
+				vec.Reset()
+			case *prometheus.SummaryVec:
+				vec.Reset()
+			}
+		}
+	}
+
 	// process callbacks (set metrics)
 	for _, callback := range callbackList {
 		callback()
+	}
+
+	// set metrics from metrics
+	for _, metric := range c.metrics.List {
+		switch vec := metric.vec.(type) {
+		case *prometheus.GaugeVec:
+			metric.GaugeSet(vec)
+		case *prometheus.HistogramVec:
+			metric.HistogramSet(vec)
+		case *prometheus.SummaryVec:
+			metric.SummarySet(vec)
+		}
 	}
 
 	if !panicDetected {
 		// reset panic counter after successful run without panics
 		atomic.StoreInt64(&c.panic.counter, 0)
 	}
+}
 
-	c.collectionFinish()
+func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool) *MetricList {
+	c.metrics.List[name] = &MetricList{
+		MetricList: prometheusCommon.NewMetricsList(),
+		vec:        vec,
+		reset:      reset,
+	}
+
+	if c.registry != nil {
+		switch vec := vec.(type) {
+		case *prometheus.GaugeVec:
+			c.registry.MustRegister(vec)
+		case *prometheus.HistogramVec:
+			c.registry.MustRegister(vec)
+		case *prometheus.SummaryVec:
+			c.registry.MustRegister(vec)
+		default:
+			panic(`not allowed prometheus metric vec found`)
+		}
+	} else {
+		switch vec := vec.(type) {
+		case *prometheus.GaugeVec:
+			prometheus.MustRegister(vec)
+		case *prometheus.HistogramVec:
+			prometheus.MustRegister(vec)
+		case *prometheus.SummaryVec:
+			prometheus.MustRegister(vec)
+		default:
+			panic(`not allowed prometheus metric vec found`)
+		}
+	}
+
+	return c.metrics.List[name]
+}
+
+func (c *Collector) GetMetricList(name string) *MetricList {
+	return c.metrics.List[name]
+}
+
+func (c *Collector) cleanupMetricLists() {
+	for _, metric := range c.metrics.List {
+		metric.MetricList.Reset()
+	}
+}
+
+func (c *Collector) collectionRestoreCache() bool {
+	if c.cache == nil {
+		return false
+	}
+
+	// restore only after startup
+	if !c.cacheRestoreEnabled {
+		return false
+	}
+
+	if _, err := os.Stat(*c.cache); !os.IsNotExist(err) {
+		restoredMetrics := NewMetrics()
+
+		c.logger.Infof(`trying to restore state from cache: %s`, *c.cache)
+
+		jsonContent, _ := os.ReadFile(*c.cache) // #nosec inside container
+		err := json.Unmarshal(jsonContent, &restoredMetrics)
+		if err != nil {
+			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
+			c.metrics = NewMetrics()
+		} else {
+			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
+				// restore data
+				c.metrics.Expiry = restoredMetrics.Expiry
+				for name, restoreMetricList := range restoredMetrics.List {
+					if restoreMetricList.List == nil {
+						continue
+					}
+
+					if metricList, exists := c.metrics.List[name]; exists {
+						metricList.List = restoreMetricList.List
+						metricList.Init()
+					}
+				}
+
+				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
+				c.SetNextSleepDuration(sleepTime)
+
+				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
+				c.cacheRestoreEnabled = false
+				return true
+			} else {
+				c.logger.Infof(`ignoring cached state, already expired`)
+			}
+		}
+	}
+
+	c.cacheRestoreEnabled = false
+
+	return false
+}
+
+func (c *Collector) collectionSaveCache() {
+	if c.cache == nil {
+		return
+	}
+
+	expiryTime := time.Now().Add(*c.sleepTime)
+	c.metrics.Expiry = &expiryTime
+
+	jsonData, _ := json.Marshal(c.metrics)
+
+	tmpFilePath := filepath.Join(
+		filepath.Dir(*c.cache),
+		fmt.Sprintf(
+			".%s.tmp",
+			filepath.Base(*c.cache),
+		),
+	)
+
+	// write to temp file first
+	err := os.WriteFile(tmpFilePath, jsonData, 0600) // #nosec inside container
+	if err != nil {
+		c.logger.Panic(err)
+	}
+
+	// rename file to final cache file (atomic operation)
+	err = os.Rename(tmpFilePath, *c.cache)
+	if err != nil {
+		c.logger.Panic(err)
+	}
+
+	c.logger.Infof(`saved state to cache: %s (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
 }
 
 func (c *Collector) collectionStart() {
@@ -193,13 +411,17 @@ func (c *Collector) collectionStart() {
 
 func (c *Collector) collectionFinish() {
 	c.lastScrapeTime = &c.collectionStartTime
+
 	duration := time.Since(c.collectionStartTime)
 	c.lastScrapeDuration = &duration
+
+	nextScrapeTime := time.Now().Add(*c.sleepTime)
+	c.nextScrapeTime = &nextScrapeTime
 
 	if c.logger != nil {
 		c.logger.WithFields(log.Fields{
 			"duration": c.lastScrapeDuration.Seconds(),
-			"nextRun":  time.Now().Add(*c.sleepTime).UTC(),
+			"nextRun":  c.nextScrapeTime.UTC(),
 		}).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 	}
 }

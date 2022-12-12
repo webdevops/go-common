@@ -142,6 +142,9 @@ func (p tracingPolicy) Do(req *policy.Request) (*http.Response, error) {
 		collectAzureApiRateLimitMetric(res, "x-ms-ratelimit-remaining-microsoft.costmanagement-entity-requests", "costmanagement", "entity-requests")
 		collectAzureApiRateLimitMetric(res, "x-ms-ratelimit-remaining-microsoft.costmanagement-tenant-requests", "costmanagement", "tenant-requests")
 
+		// consumption limits
+		collectAzureApiRateLimitMetric(res, "x-ms-ratelimit-remaining-microsoft.consumption-tenant-requests", "consumption", "tenant-requests")
+
 		// subscription rate limits
 		collectAzureApiRateLimitMetric(res, "x-ms-ratelimit-remaining-subscription-reads", "subscription", "reads")
 		collectAzureApiRateLimitMetric(res, "x-ms-ratelimit-remaining-subscription-writes", "subscription", "writes")

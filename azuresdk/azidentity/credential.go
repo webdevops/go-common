@@ -8,13 +8,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
-func NewAzCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {
+func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {
 	// azure authorizer
 	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
 	case "az", "cli", "azcli":
 		// azurecli authentication
-		opts := azidentity.AzureCLICredentialOptions{}
-		return azidentity.NewAzureCLICredential(&opts)
+		return NewAzCliCredential()
 	case "wi", "workload", "workloadidentity", "federation":
 		file := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
 		tenantID := os.Getenv("AZURE_TENANT_ID")
@@ -38,4 +37,9 @@ func NewAzCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredentia
 
 		return azidentity.NewDefaultAzureCredential(&opts)
 	}
+}
+
+func NewAzCliCredential() (azcore.TokenCredential, error) {
+	opts := azidentity.AzureCLICredentialOptions{}
+	return azidentity.NewAzureCLICredential(&opts)
 }

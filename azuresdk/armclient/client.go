@@ -28,8 +28,6 @@ type (
 
 		cred *azcore.TokenCredential
 
-		cacheAuthorizerTtl time.Duration
-
 		userAgent string
 	}
 )
@@ -41,8 +39,6 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) 
 
 	client.cacheTtl = 30 * time.Minute
 	client.cache = cache.New(60*time.Minute, 60*time.Second)
-
-	client.cacheAuthorizerTtl = 15 * time.Minute
 
 	client.logger = logger
 	client.userAgent = "go-common/unknown"
@@ -63,7 +59,7 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 // GetCred returns Azure ARM credential
 func (azureClient *ArmClient) GetCred() azcore.TokenCredential {
 	if azureClient.cred == nil {
-		cred, err := azidentity.NewAzCredential(azureClient.NewAzCoreClientOptions())
+		cred, err := azidentity.NewAzDefaultCredential(azureClient.NewAzCoreClientOptions())
 		if err != nil {
 			panic(err)
 		}
@@ -119,6 +115,15 @@ func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
 	}
 
 	return &clientOptions
+}
+
+// UseAzCliAuth use (force) az cli authentication
+func (azureClient *ArmClient) UseAzCliAuth() {
+	cred, err := azidentity.NewAzCliCredential()
+	if err != nil {
+		panic(err)
+	}
+	azureClient.cred = &cred
 }
 
 // SetUserAgent set user agent for all API calls

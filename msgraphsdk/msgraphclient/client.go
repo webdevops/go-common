@@ -23,9 +23,11 @@ type (
 
 		logger *log.Logger
 
-		cache              *cache.Cache
-		cacheTtl           time.Duration
-		cacheAuthorizerTtl time.Duration
+		cache    *cache.Cache
+		cacheTtl time.Duration
+
+		cred    *azcore.TokenCredential
+		adapter *msgraphsdk.GraphRequestAdapter
 
 		userAgent string
 	}
@@ -39,8 +41,6 @@ func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string,
 
 	client.cacheTtl = 1 * time.Hour
 	client.cache = cache.New(60*time.Minute, 60*time.Second)
-
-	client.cacheAuthorizerTtl = 15 * time.Minute
 
 	client.logger = logger
 	client.userAgent = "go-common/unknown"
@@ -64,45 +64,51 @@ func (c *MsGraphClient) ServiceClient() *msgraphsdk.GraphServiceClient {
 
 // RequestAdapter returns msgraph request adapter
 func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
-	cacheKey := "adapter"
-	if v, ok := c.cache.Get(cacheKey); ok {
-		if adapter, ok := v.(*msgraphsdk.GraphRequestAdapter); ok {
-			return adapter
+	if c.adapter == nil {
+		if c.cred == nil {
+			cred, err := azidentity.NewAzDefaultCredential(c.NewAzCoreClientOptions())
+			if err != nil {
+				c.logger.Panic(err)
+			}
+			c.cred = &cred
 		}
+
+		cred, err := azidentity.NewAzDefaultCredential(c.NewAzCoreClientOptions())
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		auth, err := a.NewAzureIdentityAuthenticationProvider(cred)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		// set endpoint from cloudconfig
+		if c.cloud.Services != nil {
+			if serviceConfig, exists := c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph]; exists {
+				adapter.SetBaseUrl(serviceConfig.Endpoint + "/v1.0")
+			}
+		}
+
+		c.adapter = adapter
 	}
 
-	adapter := c.createRequestAdapter()
-
-	c.cache.Set(cacheKey, adapter, c.cacheAuthorizerTtl)
-
-	return adapter
+	return c.adapter
 }
 
-// createRequestAdapter returns new msgraph request adapter
-func (c *MsGraphClient) createRequestAdapter() (adapter *msgraphsdk.GraphRequestAdapter) {
-	cred, err := azidentity.NewAzCredential(c.NewAzCoreClientOptions())
+// UseAzCliAuth use (force) az cli authentication
+func (c *MsGraphClient) UseAzCliAuth() {
+	cred, err := azidentity.NewAzCliCredential()
 	if err != nil {
-		c.logger.Panic(err)
+		panic(err)
 	}
-
-	auth, err := a.NewAzureIdentityAuthenticationProvider(cred)
-	if err != nil {
-		c.logger.Panic(err)
-	}
-
-	adapter, err = msgraphsdk.NewGraphRequestAdapter(auth)
-	if err != nil {
-		c.logger.Panic(err)
-	}
-
-	// set endpoint from cloudconfig
-	if c.cloud.Services != nil {
-		if serviceConfig, exists := c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph]; exists {
-			adapter.SetBaseUrl(serviceConfig.Endpoint + "/v1.0")
-		}
-	}
-
-	return
+	c.cred = &cred
+	c.adapter = nil
 }
 
 // NewAzCoreClientOptions returns new client options for all arm clients

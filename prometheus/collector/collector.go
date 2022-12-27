@@ -2,11 +2,8 @@ package collector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"sync/atomic"
 	"time"
 
@@ -34,7 +31,7 @@ type Collector struct {
 	nextScrapeTime      *time.Time
 	collectionStartTime time.Time
 
-	cache               *string
+	cache               *cacheSpecDef
 	cacheRestoreEnabled bool
 
 	panic struct {
@@ -98,18 +95,6 @@ func (c *Collector) SetContext(ctx context.Context) {
 
 func (c *Collector) SetConcurrency(concurrency int) {
 	c.concurrency = concurrency
-}
-
-func (c *Collector) EnableCache(cache string) {
-	c.cache = &cache
-}
-
-func (c *Collector) SetCache(cache *string) {
-	c.cache = cache
-}
-
-func (c *Collector) DisableCache() {
-	c.cache = nil
 }
 
 func (c *Collector) SetPrometheusRegistry(registry *prometheus.Registry) {
@@ -314,91 +299,6 @@ func (c *Collector) cleanupMetricLists() {
 	for _, metric := range c.metrics.List {
 		metric.MetricList.Reset()
 	}
-}
-
-func (c *Collector) collectionRestoreCache() bool {
-	if c.cache == nil {
-		return false
-	}
-
-	// restore only after startup
-	if !c.cacheRestoreEnabled {
-		return false
-	}
-
-	if _, err := os.Stat(*c.cache); !os.IsNotExist(err) {
-		restoredMetrics := NewMetrics()
-
-		c.logger.Infof(`trying to restore state from cache: %s`, *c.cache)
-
-		jsonContent, _ := os.ReadFile(*c.cache) // #nosec inside container
-		err := json.Unmarshal(jsonContent, &restoredMetrics)
-		if err != nil {
-			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
-			c.metrics = NewMetrics()
-		} else {
-			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
-				// restore data
-				c.metrics.Expiry = restoredMetrics.Expiry
-				for name, restoreMetricList := range restoredMetrics.List {
-					if restoreMetricList.List == nil {
-						continue
-					}
-
-					if metricList, exists := c.metrics.List[name]; exists {
-						metricList.List = restoreMetricList.List
-						metricList.Init()
-					}
-				}
-
-				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
-				c.SetNextSleepDuration(sleepTime)
-
-				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
-				c.cacheRestoreEnabled = false
-				return true
-			} else {
-				c.logger.Infof(`ignoring cached state, already expired`)
-			}
-		}
-	}
-
-	c.cacheRestoreEnabled = false
-
-	return false
-}
-
-func (c *Collector) collectionSaveCache() {
-	if c.cache == nil {
-		return
-	}
-
-	expiryTime := time.Now().Add(*c.sleepTime)
-	c.metrics.Expiry = &expiryTime
-
-	jsonData, _ := json.Marshal(c.metrics)
-
-	tmpFilePath := filepath.Join(
-		filepath.Dir(*c.cache),
-		fmt.Sprintf(
-			".%s.tmp",
-			filepath.Base(*c.cache),
-		),
-	)
-
-	// write to temp file first
-	err := os.WriteFile(tmpFilePath, jsonData, 0600) // #nosec inside container
-	if err != nil {
-		c.logger.Panic(err)
-	}
-
-	// rename file to final cache file (atomic operation)
-	err = os.Rename(tmpFilePath, *c.cache)
-	if err != nil {
-		c.logger.Panic(err)
-	}
-
-	c.logger.Infof(`saved state to cache: %s (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
 }
 
 func (c *Collector) collectionStart() {

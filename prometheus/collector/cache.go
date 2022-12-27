@@ -1,0 +1,209 @@
+package collector
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+
+	armclient "github.com/webdevops/go-common/azuresdk/armclient"
+)
+
+type (
+	cacheSpecDef struct {
+		protocol string
+		url *url.URL
+
+		spec map[string]string
+
+		client interface{}
+	}
+)
+
+const (
+	cacheProtocolFile = "file"
+	cacheProtocolAzBlob = "azblob"
+)
+
+func (c *Collector) EnableCache(cache string) {
+	c.SetCache(&cache)
+}
+
+func (c *Collector) SetCache(cache *string) {
+	if cache == nil {
+		c.cache = nil
+		return
+	}
+
+	rawSpec := *cache
+
+	c.cache = &cacheSpecDef{
+		spec: map[string]string{
+			"raw": *cache,
+		},
+	}
+
+	switch {
+	case strings.HasPrefix("file://", rawSpec):
+		c.cache.protocol = cacheProtocolFile
+		c.cache.spec["file:path"] = strings.TrimPrefix(rawSpec, "file://"),
+	case strings.HasPrefix("azblob://", rawSpec):
+		c.cache.protocol = cacheProtocolAzBlob
+		parsedUrl, err := url.Parse(rawSpec)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+		c.cache.url = parsedUrl
+
+		azureClient, err := armclient.NewArmClientFromEnvironment(c.logger.Logger)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		storageAccount := fmt.Sprintf(`https://%v/`, c.cache.url.Hostname())
+		pathParts := filepath.SplitList(c.cache.url.Path)
+		if len(pathParts) != 2 {
+			c.logger.Panic(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
+		}
+
+		c.cache.spec["azblob:container"] = pathParts[0]
+		c.cache.spec["azblob:blob"] = pathParts[1]
+
+		// create a client for the specified storage account
+		client, err := azblob.NewClient(storageAccount, azureClient.GetCred(), nil)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		c.cache.client = client
+
+	default:
+		c.cache.protocol = cacheProtocolFile
+		c.cache.spec["file:path"] = rawSpec
+	}
+}
+
+func (c *Collector) DisableCache() {
+	c.cache = nil
+}
+
+func (c *Collector) collectionRestoreCache() bool {
+	if c.cache == nil {
+		return false
+	}
+
+	// restore only after startup
+	if !c.cacheRestoreEnabled {
+		return false
+	}
+
+	if cacheContent, exists := c.cacheRead(); exists {
+		restoredMetrics := NewMetrics()
+
+		c.logger.Infof(`trying to restore state from cache: %s`, *c.cache)
+
+		err := json.Unmarshal(cacheContent, &restoredMetrics)
+		if err != nil {
+			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
+			c.metrics = NewMetrics()
+		} else {
+			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
+				// restore data
+				c.metrics.Expiry = restoredMetrics.Expiry
+				for name, restoreMetricList := range restoredMetrics.List {
+					if restoreMetricList.List == nil {
+						continue
+					}
+
+					if metricList, exists := c.metrics.List[name]; exists {
+						metricList.List = restoreMetricList.List
+						metricList.Init()
+					}
+				}
+
+				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
+				c.SetNextSleepDuration(sleepTime)
+
+				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
+				c.cacheRestoreEnabled = false
+				return true
+			} else {
+				c.logger.Infof(`ignoring cached state, already expired`)
+			}
+		}
+	}
+
+	c.cacheRestoreEnabled = false
+
+	return false
+}
+
+func (c *Collector) collectionSaveCache() {
+	if c.cache == nil {
+		return
+	}
+
+	expiryTime := time.Now().Add(*c.sleepTime)
+	c.metrics.Expiry = &expiryTime
+
+	jsonData, _ := json.Marshal(c.metrics)
+	c.cacheStore(jsonData)
+
+	c.logger.Infof(`saved state to cache: %s (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
+}
+
+func (c *Collector) cacheRead() ([]byte, bool) {
+	switch (c.cache.protocol) {
+	case cacheProtocolFile:
+		filePath := c.cache.spec["file:path"]
+		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+			content, _ := os.ReadFile(filePath) // #nosec inside container
+			return content, true
+		}
+	case cacheProtocolAzBlob:
+		buffer := []byte{}
+		_, err := c.cache.client.(*azblob.Client).DownloadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], &buffer, nil)
+		if err == nil {
+			return buffer, true
+		}
+	}
+
+	return nil, false
+}
+
+func (c *Collector) cacheStore(content []byte) {
+	switch (c.cache.protocol) {
+	case cacheProtocolFile:
+		filePath := c.cache.spec["file:path"]
+		tmpFilePath := filepath.Join(
+			filepath.Dir(filePath),
+			fmt.Sprintf(
+				".%s.tmp",
+				filepath.Base(filePath),
+			),
+		)
+
+		// write to temp file first
+		err := os.WriteFile(tmpFilePath, content, 0600) // #nosec inside container
+		if err != nil {
+			c.logger.Panic(err)
+		}
+
+		// rename file to final cache file (atomic operation)
+		err = os.Rename(tmpFilePath, filePath)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+	case cacheProtocolAzBlob:
+		_, err := c.cache.client.(*azblob.Client).UploadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], content, nil)
+		if err != nil {
+			c.logger.Panic(err)
+		}
+	}
+}

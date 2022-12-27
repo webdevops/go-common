@@ -184,8 +184,20 @@ func (c *Collector) cacheStore(content []byte) {
 	switch c.cache.protocol {
 	case cacheProtocolFile:
 		filePath := c.cache.spec["file:path"]
+
+		dirPath := filepath.Dir(filePath)
+
+		// ensure directory
+		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+			err := os.Mkdir(dirPath, 0700)
+			if err != nil {
+				c.logger.Panic(err)
+			}
+		}
+
+		// calc tmp filename
 		tmpFilePath := filepath.Join(
-			filepath.Dir(filePath),
+			dirPath,
 			fmt.Sprintf(
 				".%s.tmp",
 				filepath.Base(filePath),

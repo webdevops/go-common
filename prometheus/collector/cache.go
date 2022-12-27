@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 
 	armclient "github.com/webdevops/go-common/azuresdk/armclient"
@@ -18,7 +17,7 @@ import (
 type (
 	cacheSpecDef struct {
 		protocol string
-		url *url.URL
+		url      *url.URL
 
 		spec map[string]string
 
@@ -27,7 +26,7 @@ type (
 )
 
 const (
-	cacheProtocolFile = "file"
+	cacheProtocolFile   = "file"
 	cacheProtocolAzBlob = "azblob"
 )
 
@@ -45,15 +44,15 @@ func (c *Collector) SetCache(cache *string) {
 
 	c.cache = &cacheSpecDef{
 		spec: map[string]string{
-			"raw": *cache,
+			"raw": rawSpec,
 		},
 	}
 
 	switch {
-	case strings.HasPrefix("file://", rawSpec):
+	case strings.HasPrefix(rawSpec, `file://`):
 		c.cache.protocol = cacheProtocolFile
-		c.cache.spec["file:path"] = strings.TrimPrefix(rawSpec, "file://"),
-	case strings.HasPrefix("azblob://", rawSpec):
+		c.cache.spec["file:path"] = strings.TrimPrefix(rawSpec, "file://")
+	case strings.HasPrefix(rawSpec, `azblob://`):
 		c.cache.protocol = cacheProtocolAzBlob
 		parsedUrl, err := url.Parse(rawSpec)
 		if err != nil {
@@ -67,16 +66,17 @@ func (c *Collector) SetCache(cache *string) {
 		}
 
 		storageAccount := fmt.Sprintf(`https://%v/`, c.cache.url.Hostname())
-		pathParts := filepath.SplitList(c.cache.url.Path)
-		if len(pathParts) != 2 {
-			c.logger.Panic(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
+		pathParts := strings.SplitN(c.cache.url.Path, "/", 2)
+		if len(pathParts) < 2 {
+			c.logger.Panicf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
 		}
 
 		c.cache.spec["azblob:container"] = pathParts[0]
 		c.cache.spec["azblob:blob"] = pathParts[1]
 
 		// create a client for the specified storage account
-		client, err := azblob.NewClient(storageAccount, azureClient.GetCred(), nil)
+		azblobOpts := azblob.ClientOptions{ClientOptions: *azureClient.NewAzCoreClientOptions()}
+		client, err := azblob.NewClient(storageAccount, azureClient.GetCred(), &azblobOpts)
 		if err != nil {
 			c.logger.Panic(err)
 		}
@@ -106,7 +106,7 @@ func (c *Collector) collectionRestoreCache() bool {
 	if cacheContent, exists := c.cacheRead(); exists {
 		restoredMetrics := NewMetrics()
 
-		c.logger.Infof(`trying to restore state from cache: %s`, *c.cache)
+		c.logger.Infof(`trying to restore state from cache: %s`, c.cache.spec)
 
 		err := json.Unmarshal(cacheContent, &restoredMetrics)
 		if err != nil {
@@ -130,7 +130,7 @@ func (c *Collector) collectionRestoreCache() bool {
 				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
 				c.SetNextSleepDuration(sleepTime)
 
-				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
+				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.spec, c.metrics.Expiry.UTC().String())
 				c.cacheRestoreEnabled = false
 				return true
 			} else {
@@ -155,11 +155,11 @@ func (c *Collector) collectionSaveCache() {
 	jsonData, _ := json.Marshal(c.metrics)
 	c.cacheStore(jsonData)
 
-	c.logger.Infof(`saved state to cache: %s (expiring %s)`, *c.cache, c.metrics.Expiry.UTC().String())
+	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.spec, c.metrics.Expiry.UTC().String())
 }
 
 func (c *Collector) cacheRead() ([]byte, bool) {
-	switch (c.cache.protocol) {
+	switch c.cache.protocol {
 	case cacheProtocolFile:
 		filePath := c.cache.spec["file:path"]
 		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
@@ -168,7 +168,7 @@ func (c *Collector) cacheRead() ([]byte, bool) {
 		}
 	case cacheProtocolAzBlob:
 		buffer := []byte{}
-		_, err := c.cache.client.(*azblob.Client).DownloadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], &buffer, nil)
+		_, err := c.cache.client.(*azblob.Client).DownloadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], buffer, nil)
 		if err == nil {
 			return buffer, true
 		}
@@ -178,7 +178,7 @@ func (c *Collector) cacheRead() ([]byte, bool) {
 }
 
 func (c *Collector) cacheStore(content []byte) {
-	switch (c.cache.protocol) {
+	switch c.cache.protocol {
 	case cacheProtocolFile:
 		filePath := c.cache.spec["file:path"]
 		tmpFilePath := filepath.Join(

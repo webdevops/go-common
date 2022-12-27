@@ -19,6 +19,8 @@ type (
 		protocol string
 		url      *url.URL
 
+		raw string
+
 		spec map[string]string
 
 		client interface{}
@@ -43,9 +45,8 @@ func (c *Collector) SetCache(cache *string) {
 	rawSpec := *cache
 
 	c.cache = &cacheSpecDef{
-		spec: map[string]string{
-			"raw": rawSpec,
-		},
+		raw:  rawSpec,
+		spec: map[string]string{},
 	}
 
 	switch {
@@ -106,7 +107,7 @@ func (c *Collector) collectionRestoreCache() bool {
 	if cacheContent, exists := c.cacheRead(); exists {
 		restoredMetrics := NewMetrics()
 
-		c.logger.Infof(`trying to restore state from cache: %s`, c.cache.spec)
+		c.logger.Infof(`trying to restore state from cache: %s`, c.cache.raw)
 
 		err := json.Unmarshal(cacheContent, &restoredMetrics)
 		if err != nil {
@@ -130,7 +131,7 @@ func (c *Collector) collectionRestoreCache() bool {
 				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
 				c.SetNextSleepDuration(sleepTime)
 
-				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.spec, c.metrics.Expiry.UTC().String())
+				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.metrics.Expiry.UTC().String())
 				c.cacheRestoreEnabled = false
 				return true
 			} else {
@@ -155,7 +156,7 @@ func (c *Collector) collectionSaveCache() {
 	jsonData, _ := json.Marshal(c.metrics)
 	c.cacheStore(jsonData)
 
-	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.spec, c.metrics.Expiry.UTC().String())
+	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.metrics.Expiry.UTC().String())
 }
 
 func (c *Collector) cacheRead() ([]byte, bool) {

@@ -1,6 +1,7 @@
 package armclient
 
 import (
+	"os"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -31,6 +32,11 @@ type (
 		userAgent string
 	}
 )
+
+// NewArmClient creates new Azure SDK ARM client
+func NewArmClientFromEnvironment(logger *log.Logger) (*ArmClient, error) {
+	return NewArmClientWithCloudName(os.Getenv("AZURE_ENVIRONMENT"), logger)
+}
 
 // NewArmClient creates new Azure SDK ARM client
 func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) *ArmClient {

@@ -3,6 +3,7 @@ package collector
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -168,10 +169,11 @@ func (c *Collector) cacheRead() ([]byte, bool) {
 			return content, true
 		}
 	case cacheProtocolAzBlob:
-		buffer := []byte{}
-		_, err := c.cache.client.(*azblob.Client).DownloadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], buffer, nil)
+		response, err := c.cache.client.(*azblob.Client).DownloadStream(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], nil)
 		if err == nil {
-			return buffer, true
+			if content, err := ioutil.ReadAll(response.Body); err == nil {
+				return content, true
+			}
 		}
 	}
 

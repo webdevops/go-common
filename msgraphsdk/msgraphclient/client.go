@@ -65,7 +65,7 @@ func (c *MsGraphClient) ServiceClient() *msgraphsdk.GraphServiceClient {
 		// set endpoint from cloudconfig
 		if c.cloud.Services != nil {
 			if serviceConfig, exists := c.cloud.Services[cloudconfig.ServiceNameMicrosoftGraph]; exists {
-				scopes = []string{serviceConfig.Endpoint + "/.default"}
+				scopes = []string{serviceConfig.Audience + "/.default"}
 			}
 		}
 

@@ -14,7 +14,7 @@ require (
 	github.com/manicminer/hamilton v0.52.0
 	github.com/manicminer/hamilton-autorest v0.3.0
 	github.com/microsoft/kiota-authentication-azure-go v0.5.0
-	github.com/microsoftgraph/msgraph-sdk-go v0.49.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.50.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.14.0
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -50,6 +50,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/microsoft/kiota-abstractions-go v0.15.1 // indirect
 	github.com/microsoft/kiota-http-go v0.11.0 // indirect
+	github.com/microsoft/kiota-serialization-form-go v0.2.0 // indirect
 	github.com/microsoft/kiota-serialization-json-go v0.7.2 // indirect
 	github.com/microsoft/kiota-serialization-text-go v0.6.0 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go-core v0.31.1 // indirect

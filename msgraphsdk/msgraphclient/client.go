@@ -1,6 +1,7 @@
 package msgraphclient
 
 import (
+	"os"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -33,6 +34,21 @@ type (
 		userAgent string
 	}
 )
+
+// NewMsGraphClientFromEnvironment creates new MS Graph client from environment settings
+func NewMsGraphClientFromEnvironment(logger *log.Logger) (*MsGraphClient, error) {
+	var azureEnvironment, azureTenant string
+
+	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
+		logger.Panic(`env var AZURE_ENVIRONMENT is not set`)
+	}
+
+	if azureTenant = os.Getenv("AZURE_TENANT_ID"); azureTenant == "" {
+		logger.Panic(`env var AZURE_TENANT_ID is not set`)
+	}
+
+	return NewMsGraphClientWithCloudName(azureEnvironment, azureTenant, logger)
+}
 
 // NewMsGraphClient creates new MS Graph client
 func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *log.Logger) *MsGraphClient {

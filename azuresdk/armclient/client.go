@@ -33,9 +33,15 @@ type (
 	}
 )
 
-// NewArmClient creates new Azure SDK ARM client
+// NewArmClientFromEnvironment creates new Azure SDK ARM client from environment settings
 func NewArmClientFromEnvironment(logger *log.Logger) (*ArmClient, error) {
-	return NewArmClientWithCloudName(os.Getenv("AZURE_ENVIRONMENT"), logger)
+	var azureEnvironment string
+
+	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
+		logger.Panic(`env var AZURE_ENVIRONMENT is not set`)
+	}
+
+	return NewArmClientWithCloudName(azureEnvironment, logger)
 }
 
 // NewArmClient creates new Azure SDK ARM client

@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	AzureTagSourceSeparator = "/"
 	AzureTagOptionCharacter = "?"
 
 	AzureTagSourceResource      = "resource"

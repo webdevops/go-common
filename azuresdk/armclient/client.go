@@ -15,6 +15,7 @@ import (
 	"github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
+	"github.com/webdevops/go-common/utils/to"
 )
 
 type (
@@ -71,7 +72,7 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 
 // Connect triggers and logs connect message
 func (azureClient *ArmClient) Connect() error {
-	azureClient.logger.Infof(`using Azure Environment %v`, azureClient.cloud.Name)
+	azureClient.logger.Infof(`using Azure Environment "%v"`, azureClient.cloud.Name)
 
 	ctx := context.Background()
 	subscriptionList, err := azureClient.ListSubscriptions(ctx)
@@ -79,7 +80,11 @@ func (azureClient *ArmClient) Connect() error {
 		return err
 	}
 
-	azureClient.logger.WithField(`subscriptions`, subscriptionList).Infof(`found %v Azure Subscriptions`, subscriptionList)
+	azureClient.logger.Infof(`found %v Azure Subscriptions`, len(subscriptionList))
+	for subscriptionId, subscription := range subscriptionList {
+		azureClient.logger.Debugf(`found Azure Subscription "%v" (%v)`, subscriptionId, to.String(subscription.DisplayName))
+	}
+
 	return nil
 }
 

@@ -10,12 +10,13 @@ import (
 )
 
 const (
-	CacheIdentifierResourceGroups = "resourcegroups:%s"
+	CacheIdentifierResourceGroupList = "resourcegroups:%s"
+	CacheIdentifierResourceGroup     = "resourcegroups:%s:%s"
 )
 
 // ListCachedResourceGroups return cached list of Azure ResourceGroups as map (key is name of ResourceGroup)
 func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
-	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceGroups, subscriptionID), func() (interface{}, error) {
+	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceGroupList, subscriptionID), func() (interface{}, error) {
 		azureClient.logger.WithField("subscriptionID", subscriptionID).Debug("updating cached Azure ResourceGroup list")
 		list, err := azureClient.ListResourceGroups(ctx, subscriptionID)
 		if err != nil {
@@ -57,7 +58,7 @@ func (azureClient *ArmClient) ListResourceGroups(ctx context.Context, subscripti
 	}
 
 	// update cache
-	azureClient.cache.SetDefault(fmt.Sprintf(CacheIdentifierResourceGroups, subscriptionID), list)
+	azureClient.cache.SetDefault(fmt.Sprintf(CacheIdentifierResourceGroupList, subscriptionID), list)
 
 	return list, nil
 }

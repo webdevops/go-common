@@ -12,7 +12,7 @@ import (
 	cache "github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/webdevops/go-common/azuresdk/azidentity"
+	commonAzidentity "github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
 	"github.com/webdevops/go-common/azuresdk/prometheus/tracing"
 	"github.com/webdevops/go-common/utils/to"
@@ -72,9 +72,22 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 
 // Connect triggers and logs connect message
 func (azureClient *ArmClient) Connect() error {
+	ctx := context.Background()
+
 	azureClient.logger.Infof(`using Azure Environment "%v"`, azureClient.cloud.Name)
 
-	ctx := context.Background()
+	// try to get token
+	accessToken, err := azureClient.GetCred().GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{azureClient.cloud.Services[cloud.ResourceManager].Endpoint}})
+	if err != nil {
+		return err
+	}
+
+	if tokenInfo := commonAzidentity.ParseAccessToken(accessToken); tokenInfo != nil {
+		azureClient.logger.Warn(`using Azure client: %v`, tokenInfo.ToString())
+	} else {
+		azureClient.logger.Warn(`unable to get Azure client information, not able to parse access token`)
+	}
+
 	subscriptionList, err := azureClient.ListSubscriptions(ctx)
 	if err != nil {
 		return err
@@ -91,7 +104,7 @@ func (azureClient *ArmClient) Connect() error {
 // GetCred returns Azure ARM credential
 func (azureClient *ArmClient) GetCred() azcore.TokenCredential {
 	if azureClient.cred == nil {
-		cred, err := azidentity.NewAzDefaultCredential(azureClient.NewAzCoreClientOptions())
+		cred, err := commonAzidentity.NewAzDefaultCredential(azureClient.NewAzCoreClientOptions())
 		if err != nil {
 			panic(err)
 		}
@@ -151,7 +164,7 @@ func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
 
 // UseAzCliAuth use (force) az cli authentication
 func (azureClient *ArmClient) UseAzCliAuth() {
-	cred, err := azidentity.NewAzCliCredential()
+	cred, err := commonAzidentity.NewAzCliCredential()
 	if err != nil {
 		panic(err)
 	}

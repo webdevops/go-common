@@ -21,6 +21,8 @@ import (
 
 type (
 	ArmClient struct {
+		TagManager *ArmClientTagManager
+
 		cloud cloudconfig.CloudEnvironment
 
 		logger *log.Logger
@@ -57,6 +59,11 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) 
 
 	client.logger = logger
 	client.userAgent = "go-common/unknown"
+
+	client.TagManager = &ArmClientTagManager{
+		client: client,
+		logger: logger.WithField("component", "armClientTagManager").Logger,
+	}
 
 	return client
 }

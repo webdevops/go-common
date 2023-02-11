@@ -8,6 +8,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -22,6 +24,13 @@ const (
 )
 
 type (
+	ArmClientTagManager struct {
+		client *ArmClient
+		logger *log.Logger
+	}
+)
+
+type (
 	ResourceTagResult struct {
 		Source   string
 		TagName  string
@@ -29,14 +38,16 @@ type (
 	}
 )
 
-// ListCachedSubscriptionsWithFilter return list of subscription with filter by subscription ids
-func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID string, tagList []string) ([]ResourceTagResult, error) {
+// GetResourceTag return list of resourceTags by resourceId
+func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceID string, tagList []string) ([]ResourceTagResult, error) {
 	var (
-		azureResourceTags  *armresources.Tags
+		azureResource      *armresources.GenericResourceExpanded
 		azureResourceGroup *armresources.ResourceGroup
 		azureSubscription  *armsubscriptions.Subscription
 	)
 	var ret []ResourceTagResult
+
+	resourceID = strings.ToLower(resourceID)
 
 	resourceInfo, err := ParseResourceId(resourceID)
 	if err != nil {
@@ -49,21 +60,25 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 		// fetch tag value
 		switch tagSource {
 		case AzureTagSourceResource:
-			if val, err := azureClient.GetCachedTagsForResource(ctx, resourceID); err == nil {
-				azureResourceTags = val
-			} else {
-				return tagValue, err
+			if azureResource == nil {
+				if resource, err := tagmgr.client.GetCachedResource(ctx, resourceID); err == nil && resource != nil {
+					azureResource = resource
+				} else {
+					return tagValue, err
+				}
 			}
 
-			if val, exists := azureResourceTags.Tags[tagName]; exists {
-				tagValue = to.String(val)
+			if azureResource != nil {
+				if val, exists := azureResource.Tags[tagName]; exists {
+					tagValue = to.String(val)
+				}
 			}
 
 		case AzureTagSourceResourceGroup:
 			// get resourceGroup
 			if azureResourceGroup == nil {
-				resourceGroupName := strings.ToLower(resourceInfo.ResourceName)
-				if list, err := azureClient.ListCachedResourceGroups(ctx, resourceInfo.Subscription); err == nil {
+				resourceGroupName := strings.ToLower(resourceInfo.ResourceGroup)
+				if list, err := tagmgr.client.ListCachedResourceGroups(ctx, resourceInfo.Subscription); err == nil {
 					if val, exists := list[resourceGroupName]; exists {
 						azureResourceGroup = val
 					} else {
@@ -74,14 +89,16 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 				}
 			}
 
-			if val, exists := azureResourceGroup.Tags[tagName]; exists {
-				tagValue = to.String(val)
+			if azureResourceGroup != nil {
+				if val, exists := azureResourceGroup.Tags[tagName]; exists {
+					tagValue = to.String(val)
+				}
 			}
 
 		case AzureTagSourceSubscription:
 			// get subscription
 			if azureSubscription == nil {
-				if list, err := azureClient.ListCachedSubscriptions(ctx); err == nil {
+				if list, err := tagmgr.client.ListCachedSubscriptions(ctx); err == nil {
 					if val, exists := list[resourceInfo.Subscription]; exists {
 						azureSubscription = val
 					} else {
@@ -92,8 +109,10 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 				}
 			}
 
-			if val, exists := azureResourceGroup.Tags[tagName]; exists {
-				tagValue = to.String(val)
+			if azureSubscription != nil {
+				if val, exists := azureSubscription.Tags[tagName]; exists {
+					tagValue = to.String(val)
+				}
 			}
 
 		default:
@@ -108,9 +127,17 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 	for _, rawTagName := range tagList {
 		// default
 		tagName := rawTagName
-		tagSource := AzureTagSourceResource
 		tagOptions := ""
 		tagValue := ""
+
+		tagSource := AzureTagSourceResource
+		if resourceInfo.ResourceName == "" {
+			tagSource = AzureTagSourceResourceGroup
+		}
+
+		if resourceInfo.ResourceGroup == "" {
+			tagSource = AzureTagSourceSubscription
+		}
 
 		// detect if tag has different source
 		// eg subscription/foobar
@@ -133,7 +160,8 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 		if val, err := fetchTagValue(tagName, tagSource); err == nil {
 			tagValue = val
 		} else {
-			return ret, err
+			tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+			tagValue = ""
 		}
 
 		// apply options
@@ -146,23 +174,25 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 			if options.Has("inherit") {
 				// only inherit if empty
 				// try resource -> resourcegroup
-				if tagValue == "" && tagSource == AzureTagSourceResource {
+				if tagValue == "" {
 					// fetch tag value
 					if val, err := fetchTagValue(tagName, AzureTagSourceResourceGroup); err == nil {
 						tagValue = val
 					} else {
-						return ret, err
+						tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from ResourceGroup): %v`, resourceID, err.Error())
+						tagValue = ""
 					}
 				}
 
 				// only inherit if empty
 				// try resourcegroup -> subscription
-				if tagValue == "" && tagSource == AzureTagSourceResourceGroup {
+				if tagValue == "" {
 					// fetch tag value
 					if val, err := fetchTagValue(tagName, AzureTagSourceSubscription); err == nil {
 						tagValue = val
 					} else {
-						return ret, err
+						tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from Subscription): %v`, resourceID, err.Error())
+						tagValue = ""
 					}
 				}
 			}
@@ -193,10 +223,11 @@ func (azureClient *ArmClient) GetResourceTag(ctx context.Context, resourceID str
 	return ret, nil
 }
 
-func (azureClient *ArmClient) GetCachedTagsForResource(ctx context.Context, resourceID string) (*armresources.Tags, error) {
+// GetCachedTagsForResource returns list of cached tags per resource
+func (tagmgr *ArmClientTagManager) GetCachedTagsForResource(ctx context.Context, resourceID string) (*armresources.Tags, error) {
 	identifier := "tags:" + resourceID
-	result, err := azureClient.cacheData(identifier, func() (interface{}, error) {
-		list, err := azureClient.GetTagsForResource(ctx, resourceID)
+	result, err := tagmgr.client.cacheData(identifier, func() (interface{}, error) {
+		list, err := tagmgr.GetTagsForResource(ctx, resourceID)
 		if err != nil {
 			return list, err
 		}
@@ -209,13 +240,14 @@ func (azureClient *ArmClient) GetCachedTagsForResource(ctx context.Context, reso
 	return result.(*armresources.Tags), nil
 }
 
-func (azureClient *ArmClient) GetTagsForResource(ctx context.Context, resourceID string) (*armresources.Tags, error) {
+// GetTagsForResource returns list of tags per resource
+func (tagmgr *ArmClientTagManager) GetTagsForResource(ctx context.Context, resourceID string) (*armresources.Tags, error) {
 	resourceInfo, err := ParseResourceId(resourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := armresources.NewTagsClient(resourceInfo.Subscription, azureClient.GetCred(), azureClient.NewArmClientOptions())
+	client, err := armresources.NewTagsClient(resourceInfo.Subscription, tagmgr.client.GetCred(), tagmgr.client.NewArmClientOptions())
 	if err != nil {
 		return nil, err
 	}
@@ -226,4 +258,68 @@ func (azureClient *ArmClient) GetTagsForResource(ctx context.Context, resourceID
 	}
 
 	return tags.TagsResource.Properties, nil
+}
+
+// AddResourceTagsToPrometheusLabels adds resource tags to prometheus labels
+func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string, tagList []string) prometheus.Labels {
+	return tagmgr.AddResourceTagsToPrometheusLabelsWithCustomPrefix(ctx, labels, resourceID, tagList, AzurePrometheusLabelPrefix)
+}
+
+// AddResourceTagsToPrometheusLabelsWithCustomPrefix adds resource tags to prometheus labels with custom prefix
+func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsWithCustomPrefix(ctx context.Context, labels prometheus.Labels, resourceID string, tagList []string, labelPrefix string) prometheus.Labels {
+	resourceTags, err := tagmgr.GetResourceTag(ctx, resourceID, tagList)
+	if err != nil {
+		tagmgr.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
+		return labels
+	}
+
+	for _, tag := range resourceTags {
+		tagLabel := labelPrefix + azureTagNameToPrometheusNameRegExp.ReplaceAllLiteralString(tag.TagName, "_")
+		labels[tagLabel] = tag.TagValue
+	}
+
+	return labels
+}
+
+// AddResourceTagsToPrometheusLabelsDefinition adds tags to label list
+func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsDefinition(labels, tags []string) []string {
+	return tagmgr.AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags, AzurePrometheusLabelPrefix)
+}
+
+// AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix adds tags to label list with custom prefix
+func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags []string, labelPrefix string) []string {
+	for _, rawTagName := range tags {
+		tagName := rawTagName
+		tagOptions := ""
+
+		// detect if tag has different source
+		// eg subscription/foobar
+		if strings.Contains(tagName, AzureTagSourceSeparator) {
+			if parts := strings.SplitN(tagName, AzureTagSourceSeparator, 2); len(parts) == 2 {
+				tagName = parts[1]
+			}
+		}
+
+		// fetch options
+		if strings.Contains(tagName, AzureTagOptionCharacter) {
+			if parts := strings.SplitN(tagName, AzureTagOptionCharacter, 2); len(parts) == 2 {
+				tagName = parts[0]
+				tagOptions = parts[1]
+			}
+		}
+
+		// apply options
+		if tagOptions != "" {
+			options, err := url.ParseQuery(tagOptions)
+			if err == nil {
+				if val := options.Get("name"); len(val) >= 1 {
+					tagName = val
+				}
+			}
+		}
+
+		labels = append(labels, labelPrefix+tagName)
+	}
+
+	return labels
 }

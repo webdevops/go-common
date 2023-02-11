@@ -82,7 +82,12 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 func (azureClient *ArmClient) Connect() error {
 	ctx := context.Background()
 
-	azureClient.logger.Infof(`using Azure Environment "%v"`, azureClient.cloud.Name)
+	azureClient.logger.Infof(
+		`connecting to Azure Environment "%v" (AzureAD:%s ResourceManager:%s)`,
+		azureClient.cloud.Name,
+		azureClient.cloud.ActiveDirectoryAuthorityHost,
+		azureClient.cloud.Services[cloud.ResourceManager].Endpoint,
+	)
 
 	// try to get token
 	scope := strings.TrimSuffix(azureClient.cloud.Services[cloud.ResourceManager].Endpoint, "/.default") + "/.default"
@@ -94,7 +99,7 @@ func (azureClient *ArmClient) Connect() error {
 	if tokenInfo := commonAzidentity.ParseAccessToken(accessToken); tokenInfo != nil {
 		azureClient.logger.WithField("client", tokenInfo.ToMap()).Infof(`using Azure client: %v`, tokenInfo.ToString())
 	} else {
-		azureClient.logger.Warn(`unable to get Azure client information, not able to parse access token`)
+		azureClient.logger.Warn(`unable to get Azure client information, cannot parse accesstoken`)
 	}
 
 	subscriptionList, err := azureClient.ListSubscriptions(ctx)

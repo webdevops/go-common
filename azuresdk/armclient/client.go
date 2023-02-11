@@ -70,16 +70,17 @@ func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient
 }
 
 // Connect triggers and logs connect message
-func (azureClient *ArmClient) Connect() azcore.TokenCredential {
+func (azureClient *ArmClient) Connect() error {
 	azureClient.logger.Infof(`using Azure Environment %v`, azureClient.cloud.Name)
 
 	ctx := context.Background()
 	subscriptionList, err := azureClient.ListSubscriptions(ctx)
 	if err != nil {
-		azureClient.logger.Panic(err.Error())
+		return err
 	}
 
 	azureClient.logger.WithField(`subscriptions`, subscriptionList).Infof(`found %v Azure Subscriptions`, subscriptionList)
+	return nil
 }
 
 // GetCred returns Azure ARM credential

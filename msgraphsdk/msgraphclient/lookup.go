@@ -53,10 +53,10 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		principalObjectIDChunkList := lookupPrincipalObjectIDList[i:end]
 
-		opts := directoryobjects.NewGetByIdsPostRequestBody()
-		opts.SetIds(principalObjectIDChunkList)
+		requestBody := directoryobjects.NewMicrosoftGraphGetByIdsGetByIdsPostRequestBody()
+		requestBody.SetIds(principalObjectIDChunkList)
 
-		result, err := c.ServiceClient().DirectoryObjects().GetByIds().Post(ctx, opts, nil)
+		result, err := c.ServiceClient().DirectoryObjects().MicrosoftGraphGetByIds().Post(ctx, requestBody, nil)
 		if err != nil {
 			return ret, err
 		}

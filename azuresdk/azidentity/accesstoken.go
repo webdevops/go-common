@@ -35,27 +35,36 @@ func ParseAccessToken(token azcore.AccessToken) *AccessTokenInfo {
 	return nil
 }
 
-func (t *AccessTokenInfo) ToString() string {
-	parts := []string{}
+func (t *AccessTokenInfo) ToMap() map[string]string {
+	info := map[string]string{}
 
 	if t.Aud != "" {
-		parts = append(parts, fmt.Sprintf("aud=%s", t.Aud))
+		info["aud"] = t.Aud
 	}
 
 	if t.Tid != "" {
-		parts = append(parts, fmt.Sprintf("tid=%s", t.Tid))
+		info["tid"] = t.Tid
 	}
 
 	if t.AppId != "" {
-		parts = append(parts, fmt.Sprintf("appid=%s", t.AppId))
+		info["appid"] = t.AppId
 	}
 
 	if t.Oid != "" {
-		parts = append(parts, fmt.Sprintf("oid=%s", t.Oid))
+		info["oid"] = t.Oid
 	}
 
 	if t.Upn != "" {
-		parts = append(parts, fmt.Sprintf("upn=%s", t.Upn))
+		info["upd"] = t.Upn
+	}
+
+	return info
+}
+
+func (t *AccessTokenInfo) ToString() string {
+	var parts []string
+	for key, val := range t.ToMap() {
+		parts = append(parts, fmt.Sprintf("%s=%s", key, val))
 	}
 
 	return strings.Join(parts, ", ")

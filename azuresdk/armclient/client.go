@@ -83,7 +83,7 @@ func (azureClient *ArmClient) Connect() error {
 	}
 
 	if tokenInfo := commonAzidentity.ParseAccessToken(accessToken); tokenInfo != nil {
-		azureClient.logger.Warn(`using Azure client: %v`, tokenInfo.ToString())
+		azureClient.logger.WithField("client", tokenInfo.ToMap()).Infof(`using Azure client: %v`, tokenInfo.ToString())
 	} else {
 		azureClient.logger.Warn(`unable to get Azure client information, not able to parse access token`)
 	}

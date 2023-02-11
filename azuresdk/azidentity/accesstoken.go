@@ -11,11 +11,11 @@ import (
 
 type (
 	AccessTokenInfo struct {
-		Aud   string `json:"aud"`
-		Tid   string `json:"tid"`
-		AppId string `json:"appid"`
-		Oid   string `json:"oid"`
-		Upn   string `json:"upn"`
+		Aud   *string `json:"aud"`
+		Tid   *string `json:"tid"`
+		AppId *string `json:"appid"`
+		Oid   *string `json:"oid"`
+		Upn   *string `json:"upn"`
 	}
 )
 
@@ -38,33 +38,50 @@ func ParseAccessToken(token azcore.AccessToken) *AccessTokenInfo {
 func (t *AccessTokenInfo) ToMap() map[string]string {
 	info := map[string]string{}
 
-	if t.Aud != "" {
-		info["aud"] = t.Aud
+	if t.Aud != nil {
+		info["aud"] = *t.Aud
 	}
 
-	if t.Tid != "" {
-		info["tid"] = t.Tid
+	if t.Tid != nil {
+		info["tid"] = *t.Tid
 	}
 
-	if t.AppId != "" {
-		info["appid"] = t.AppId
+	if t.AppId != nil {
+		info["appid"] = *t.AppId
 	}
 
-	if t.Oid != "" {
-		info["oid"] = t.Oid
+	if t.Oid != nil {
+		info["oid"] = *t.Oid
 	}
 
-	if t.Upn != "" {
-		info["upd"] = t.Upn
+	if t.Upn != nil {
+		info["upd"] = *t.Upn
 	}
 
 	return info
 }
 
+func (t *AccessTokenInfo) ToJsonString() (info string) {
+	if content, err := json.Marshal(t); err == nil {
+		info = string(content)
+	}
+
+	return
+}
+
 func (t *AccessTokenInfo) ToString() string {
 	var parts []string
-	for key, val := range t.ToMap() {
-		parts = append(parts, fmt.Sprintf("%s=%s", key, val))
+
+	if t.AppId != nil {
+		parts = append(parts, fmt.Sprintf("appid=%s", *t.AppId))
+	}
+
+	if t.Oid != nil {
+		parts = append(parts, fmt.Sprintf("oid=%s", *t.Oid))
+	}
+
+	if t.Upn != nil {
+		parts = append(parts, fmt.Sprintf("upn=%s", *t.Upn))
 	}
 
 	return strings.Join(parts, ", ")

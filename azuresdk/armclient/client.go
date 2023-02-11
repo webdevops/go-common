@@ -3,6 +3,7 @@ package armclient
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -77,7 +78,8 @@ func (azureClient *ArmClient) Connect() error {
 	azureClient.logger.Infof(`using Azure Environment "%v"`, azureClient.cloud.Name)
 
 	// try to get token
-	accessToken, err := azureClient.GetCred().GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{azureClient.cloud.Services[cloud.ResourceManager].Endpoint}})
+	scope := strings.TrimSuffix(azureClient.cloud.Services[cloud.ResourceManager].Endpoint, "/.default") + "/.default"
+	accessToken, err := azureClient.GetCred().GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 	if err != nil {
 		return err
 	}

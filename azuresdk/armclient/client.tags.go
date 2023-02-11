@@ -47,11 +47,12 @@ type (
 		Source     string
 		TargetName string
 		Inherit    bool
-		Options    *ResourceTagConfigOptions
+		Transform  ResourceTagConfigTransform
 	}
 
-	ResourceTagConfigOptions struct {
-		*url.Values
+	ResourceTagConfigTransform struct {
+		ToLower bool
+		ToUpper bool
 	}
 )
 
@@ -153,13 +154,6 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 			TargetName: tagConfig.TargetName,
 		}
 
-		// apply options
-		if tagConfig.Options != nil {
-			if val := tagConfig.Options.Get("name"); result.TargetName == "" && len(val) >= 1 {
-				result.TargetName = val
-			}
-		}
-
 		// automatic set tag source based on resource info
 		if tagConfig.Source == "" {
 			tagConfig.Source = AzureTagSourceResource
@@ -234,15 +228,13 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 			}
 		}
 
-		// apply options
-		if tagConfig.Options != nil {
-			if tagConfig.Options.Has("toLower") || tagConfig.Options.Has("tolower") {
-				result.TagValue = strings.ToLower(result.TagValue)
-			}
+		// apply transformations
+		if tagConfig.Transform.ToLower {
+			result.TagValue = strings.ToLower(result.TagValue)
+		}
 
-			if tagConfig.Options.Has("toUpper") || tagConfig.Options.Has("toupper") {
-				result.TagValue = strings.ToUpper(result.TagValue)
-			}
+		if tagConfig.Transform.ToUpper {
+			result.TagValue = strings.ToUpper(result.TagValue)
 		}
 
 		ret[i] = result
@@ -327,37 +319,38 @@ func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string,
 
 // AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix adds tags to label list with custom prefix
 func (tagmgr *ArmClientTagManager) parseTagConfig(tag, labelPrefix string) (ResourceTagConfigTag, error) {
+	var err error
 	config := ResourceTagConfigTag{
 		Name:       tag,
 		TargetName: tag,
 		Inherit:    false,
-		Options:    nil,
+		Transform:  ResourceTagConfigTransform{},
 	}
+
+	options := url.Values{}
 
 	// fetch options
 	if strings.Contains(config.Name, AzureTagOptionCharacter) {
 		if parts := strings.SplitN(config.Name, AzureTagOptionCharacter, 2); len(parts) == 2 {
 			config.Name = parts[0]
-			options, err := url.ParseQuery(parts[1])
+			options, err = url.ParseQuery(parts[1])
 			if err != nil {
 				return config, err
 			}
-
-			config.Options = &ResourceTagConfigOptions{Values: &options}
 		}
 	}
 
-	if config.Options != nil {
-		if config.Options.Has("name") {
-			config.TargetName = config.Options.Get("name")
+	if options != nil {
+		if options.Has("name") {
+			config.TargetName = options.Get("name")
 		}
 
-		if config.Options.Has("inherit") {
+		if options.Has("inherit") {
 			config.Inherit = true
 		}
 
-		if config.Options.Has("source") {
-			switch strings.ToLower(config.Options.Get("source")) {
+		if options.Has("source") {
+			switch strings.ToLower(options.Get("source")) {
 			case AzureTagSourceResource:
 				config.Source = AzureTagSourceResource
 			case AzureTagSourceResourceGroup:
@@ -365,8 +358,16 @@ func (tagmgr *ArmClientTagManager) parseTagConfig(tag, labelPrefix string) (Reso
 			case AzureTagSourceSubscription:
 				config.Source = AzureTagSourceSubscription
 			default:
-				return config, fmt.Errorf(`invalid source "%s"`, config.Options.Get("source"))
+				return config, fmt.Errorf(`invalid source "%s"`, options.Get("source"))
 			}
+		}
+
+		if options.Has("toLower") || options.Has("tolower") {
+			config.Transform.ToLower = true
+		}
+
+		if options.Has("toUpper") || options.Has("toupper") {
+			config.Transform.ToUpper = true
 		}
 	}
 

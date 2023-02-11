@@ -32,20 +32,38 @@ type (
 
 type (
 	ResourceTagResult struct {
-		Source   string
-		TagName  string
-		TagValue string
+		Source     string
+		TagName    string
+		TagValue   string
+		TargetName string
+	}
+
+	ResourceTagConfig struct {
+		Tags []ResourceTagConfigTag
+	}
+
+	ResourceTagConfigTag struct {
+		Name       string
+		Source     string
+		TargetName string
+		Inherit    bool
+		Options    *ResourceTagConfigOptions
+	}
+
+	ResourceTagConfigOptions struct {
+		*url.Values
 	}
 )
 
 // GetResourceTag return list of resourceTags by resourceId
-func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceID string, tagList []string) ([]ResourceTagResult, error) {
+func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceID string, config ResourceTagConfig) ([]ResourceTagResult, error) {
 	var (
 		azureResource      *armresources.GenericResourceExpanded
 		azureResourceGroup *armresources.ResourceGroup
 		azureSubscription  *armsubscriptions.Subscription
 	)
-	var ret []ResourceTagResult
+
+	ret := make([]ResourceTagResult, len(config.Tags))
 
 	resourceID = strings.ToLower(resourceID)
 
@@ -124,100 +142,110 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 		return tagValue, nil
 	}
 
-	for _, rawTagName := range tagList {
+	i := -1
+	for _, tagConfig := range config.Tags {
+		i++
+
 		// default
-		tagName := rawTagName
-		tagOptions := ""
-		tagValue := ""
-
-		tagSource := AzureTagSourceResource
-		if resourceInfo.ResourceName == "" {
-			tagSource = AzureTagSourceResourceGroup
-		}
-
-		if resourceInfo.ResourceGroup == "" {
-			tagSource = AzureTagSourceSubscription
-		}
-
-		// detect if tag has different source
-		// eg subscription/foobar
-		if strings.Contains(tagName, AzureTagSourceSeparator) {
-			if parts := strings.SplitN(tagName, AzureTagSourceSeparator, 2); len(parts) == 2 {
-				tagSource = strings.ToLower(parts[0])
-				tagName = parts[1]
-			}
-		}
-
-		// fetch options
-		if strings.Contains(tagName, AzureTagOptionCharacter) {
-			if parts := strings.SplitN(tagName, AzureTagOptionCharacter, 2); len(parts) == 2 {
-				tagName = parts[0]
-				tagOptions = parts[1]
-			}
-		}
-
-		// fetch tag value
-		if val, err := fetchTagValue(tagName, tagSource); err == nil {
-			tagValue = val
-		} else {
-			tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
-			tagValue = ""
+		result := ResourceTagResult{
+			TagName:    tagConfig.Name,
+			TagValue:   "",
+			TargetName: tagConfig.TargetName,
 		}
 
 		// apply options
-		if tagOptions != "" {
-			options, err := url.ParseQuery(tagOptions)
-			if err != nil {
-				return ret, err
-			}
-
-			if options.Has("inherit") {
-				// only inherit if empty
-				// try resource -> resourcegroup
-				if tagValue == "" {
-					// fetch tag value
-					if val, err := fetchTagValue(tagName, AzureTagSourceResourceGroup); err == nil {
-						tagValue = val
-					} else {
-						tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from ResourceGroup): %v`, resourceID, err.Error())
-						tagValue = ""
-					}
-				}
-
-				// only inherit if empty
-				// try resourcegroup -> subscription
-				if tagValue == "" {
-					// fetch tag value
-					if val, err := fetchTagValue(tagName, AzureTagSourceSubscription); err == nil {
-						tagValue = val
-					} else {
-						tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from Subscription): %v`, resourceID, err.Error())
-						tagValue = ""
-					}
-				}
-			}
-
-			if val := options.Get("name"); len(val) >= 1 {
-				tagName = val
-			}
-
-			if options.Has("toLower") || options.Has("tolower") {
-				tagValue = strings.ToLower(tagValue)
-			}
-
-			if options.Has("toUpper") || options.Has("toupper") {
-				tagValue = strings.ToUpper(tagValue)
+		if tagConfig.Options != nil {
+			if val := tagConfig.Options.Get("name"); result.TargetName == "" && len(val) >= 1 {
+				result.TargetName = val
 			}
 		}
 
-		ret = append(
-			ret,
-			ResourceTagResult{
-				Source:   tagSource,
-				TagName:  tagName,
-				TagValue: tagValue,
-			},
-		)
+		// automatic set tag source based on resource info
+		if tagConfig.Source == "" {
+			tagConfig.Source = AzureTagSourceResource
+			if resourceInfo.ResourceName == "" {
+				tagConfig.Source = AzureTagSourceResourceGroup
+			}
+			if resourceInfo.ResourceGroup == "" {
+				tagConfig.Source = AzureTagSourceSubscription
+			}
+		}
+
+		// fetch tag value from source resource
+		// we might want to ignore if tag source is resource but resource is resourceGroup
+		switch tagConfig.Source {
+		case AzureTagSourceResource:
+			if resourceInfo.ResourceName != "" {
+				if val, err := fetchTagValue(tagConfig.Name, AzureTagSourceResource); err == nil {
+					result.TagValue = val
+					result.Source = AzureTagSourceResource
+				} else {
+					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					result.TagValue = ""
+				}
+			}
+		case AzureTagSourceResourceGroup:
+			if resourceInfo.ResourceGroup != "" {
+				if val, err := fetchTagValue(tagConfig.Name, AzureTagSourceResourceGroup); err == nil {
+					result.TagValue = val
+					result.Source = AzureTagSourceResourceGroup
+				} else {
+					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					result.TagValue = ""
+				}
+			}
+		case AzureTagSourceSubscription:
+			if resourceInfo.Subscription != "" {
+				if val, err := fetchTagValue(tagConfig.Name, AzureTagSourceSubscription); err == nil {
+					result.TagValue = val
+					result.Source = AzureTagSourceSubscription
+				} else {
+					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					result.TagValue = ""
+				}
+			}
+		}
+
+		if tagConfig.Inherit {
+			// only inherit if empty
+			// try resource -> resourcegroup
+			if result.TagValue == "" {
+				// fetch tag value
+				if val, err := fetchTagValue(tagConfig.Name, AzureTagSourceResourceGroup); err == nil {
+					result.TagValue = val
+					result.Source = AzureTagSourceResourceGroup
+				} else {
+					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from ResourceGroup): %v`, resourceID, err.Error())
+					result.TagValue = ""
+				}
+			}
+
+			// only inherit if empty
+			// try resourcegroup -> subscription
+			if result.TagValue == "" {
+				// fetch tag value
+				if val, err := fetchTagValue(tagConfig.Name, AzureTagSourceSubscription); err == nil {
+					result.TagValue = val
+					result.Source = AzureTagSourceSubscription
+				} else {
+					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from Subscription): %v`, resourceID, err.Error())
+					result.TagValue = ""
+				}
+			}
+		}
+
+		// apply options
+		if tagConfig.Options != nil {
+			if tagConfig.Options.Has("toLower") || tagConfig.Options.Has("tolower") {
+				result.TagValue = strings.ToLower(result.TagValue)
+			}
+
+			if tagConfig.Options.Has("toUpper") || tagConfig.Options.Has("toupper") {
+				result.TagValue = strings.ToUpper(result.TagValue)
+			}
+		}
+
+		ret[i] = result
 	}
 
 	return ret, nil
@@ -261,65 +289,96 @@ func (tagmgr *ArmClientTagManager) GetTagsForResource(ctx context.Context, resou
 }
 
 // AddResourceTagsToPrometheusLabels adds resource tags to prometheus labels
-func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string, tagList []string) prometheus.Labels {
-	return tagmgr.AddResourceTagsToPrometheusLabelsWithCustomPrefix(ctx, labels, resourceID, tagList, AzurePrometheusLabelPrefix)
-}
-
-// AddResourceTagsToPrometheusLabelsWithCustomPrefix adds resource tags to prometheus labels with custom prefix
-func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsWithCustomPrefix(ctx context.Context, labels prometheus.Labels, resourceID string, tagList []string, labelPrefix string) prometheus.Labels {
-	resourceTags, err := tagmgr.GetResourceTag(ctx, resourceID, tagList)
+func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string, config ResourceTagConfig) prometheus.Labels {
+	resourceTags, err := tagmgr.GetResourceTag(ctx, resourceID, config)
 	if err != nil {
 		tagmgr.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
 		return labels
 	}
 
 	for _, tag := range resourceTags {
-		tagLabel := labelPrefix + azureTagNameToPrometheusNameRegExp.ReplaceAllLiteralString(tag.TagName, "_")
-		labels[tagLabel] = tag.TagValue
+		labels[tag.TargetName] = tag.TagValue
 	}
 
 	return labels
 }
 
-// AddResourceTagsToPrometheusLabelsDefinition adds tags to label list
-func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsDefinition(labels, tags []string) []string {
-	return tagmgr.AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags, AzurePrometheusLabelPrefix)
+func (tagmgr *ArmClientTagManager) ParseTagConfig(tags []string) (ResourceTagConfig, error) {
+	return tagmgr.ParseTagConfigWithCustomPrefix(tags, AzurePrometheusLabelPrefix)
+}
+
+func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string, labelPrefix string) (ResourceTagConfig, error) {
+	config := ResourceTagConfig{
+		Tags: make([]ResourceTagConfigTag, len(tags)),
+	}
+
+	i := 0
+	for _, tag := range tags {
+		tagConfig, err := tagmgr.parseTagConfig(tag, labelPrefix)
+		if err != nil {
+			tagmgr.logger.Panicf(`unable to parse tag config "%s": %v`, tag, err.Error())
+		}
+		config.Tags[i] = tagConfig
+		i++
+	}
+
+	return config, nil
 }
 
 // AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix adds tags to label list with custom prefix
-func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabelsDefinitionWithCustomPrefix(labels, tags []string, labelPrefix string) []string {
-	for _, rawTagName := range tags {
-		tagName := rawTagName
-		tagOptions := ""
-
-		// detect if tag has different source
-		// eg subscription/foobar
-		if strings.Contains(tagName, AzureTagSourceSeparator) {
-			if parts := strings.SplitN(tagName, AzureTagSourceSeparator, 2); len(parts) == 2 {
-				tagName = parts[1]
-			}
-		}
-
-		// fetch options
-		if strings.Contains(tagName, AzureTagOptionCharacter) {
-			if parts := strings.SplitN(tagName, AzureTagOptionCharacter, 2); len(parts) == 2 {
-				tagName = parts[0]
-				tagOptions = parts[1]
-			}
-		}
-
-		// apply options
-		if tagOptions != "" {
-			options, err := url.ParseQuery(tagOptions)
-			if err == nil {
-				if val := options.Get("name"); len(val) >= 1 {
-					tagName = val
-				}
-			}
-		}
-
-		labels = append(labels, labelPrefix+tagName)
+func (tagmgr *ArmClientTagManager) parseTagConfig(tag, labelPrefix string) (ResourceTagConfigTag, error) {
+	config := ResourceTagConfigTag{
+		Name:       tag,
+		TargetName: tag,
+		Inherit:    false,
+		Options:    nil,
 	}
 
+	// fetch options
+	if strings.Contains(config.Name, AzureTagOptionCharacter) {
+		if parts := strings.SplitN(config.Name, AzureTagOptionCharacter, 2); len(parts) == 2 {
+			config.Name = parts[0]
+			options, err := url.ParseQuery(parts[1])
+			if err != nil {
+				return config, err
+			}
+
+			config.Options = &ResourceTagConfigOptions{Values: &options}
+		}
+	}
+
+	if config.Options != nil {
+		if config.Options.Has("name") {
+			config.TargetName = config.Options.Get("name")
+		}
+
+		if config.Options.Has("inherit") {
+			config.Inherit = true
+		}
+
+		if config.Options.Has("source") {
+			switch strings.ToLower(config.Options.Get("source")) {
+			case AzureTagSourceResource:
+				config.Source = AzureTagSourceResource
+			case AzureTagSourceResourceGroup:
+				config.Source = AzureTagSourceResourceGroup
+			case AzureTagSourceSubscription:
+				config.Source = AzureTagSourceSubscription
+			default:
+				return config, fmt.Errorf(`invalid source "%s"`, config.Options.Get("source"))
+			}
+		}
+	}
+
+	config.TargetName = labelPrefix + azureTagNameToPrometheusNameRegExp.ReplaceAllLiteralString(strings.ToLower(config.TargetName), "_")
+
+	return config, nil
+}
+
+// AddToPrometheusLabels add prometheus tag labels to existing labels
+func (c *ResourceTagConfig) AddToPrometheusLabels(labels []string) []string {
+	for _, tagConfig := range c.Tags {
+		labels = append(labels, tagConfig.TargetName)
+	}
 	return labels
 }

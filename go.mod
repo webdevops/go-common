@@ -3,8 +3,8 @@ module github.com/webdevops/go-common
 go 1.19
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.4.0-beta.1
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0-beta.3
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.0.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.0.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0

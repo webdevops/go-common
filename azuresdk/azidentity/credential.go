@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	azureAuthorityHost      = "AZURE_AUTHORITY_HOST"
-	azureClientID           = "AZURE_CLIENT_ID"
-	azureFederatedTokenFile = "AZURE_FEDERATED_TOKEN_FILE"
-	azureTenantID           = "AZURE_TENANT_ID"
+	AzureAuthorityHost      = "AZURE_AUTHORITY_HOST"
+	AzureClientID           = "AZURE_CLIENT_ID"
+	AzureFederatedTokenFile = "AZURE_FEDERATED_TOKEN_FILE"
+	AzureTenantID           = "AZURE_TENANT_ID"
 )
 
 func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {
@@ -26,20 +26,20 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 		var tokenFile, tenantID, clientID string
 		var ok bool
 
-		if _, ok = os.LookupEnv(azureAuthorityHost); !ok {
-			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, azureAuthorityHost))
+		if _, ok = os.LookupEnv(AzureAuthorityHost); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, AzureAuthorityHost))
 		}
 
-		if tokenFile, ok = os.LookupEnv(azureFederatedTokenFile); !ok {
-			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, azureFederatedTokenFile))
+		if tokenFile, ok = os.LookupEnv(AzureFederatedTokenFile); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, AzureFederatedTokenFile))
 		}
 
-		if tenantID, ok = os.LookupEnv(azureTenantID); !ok {
-			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, azureTenantID))
+		if tenantID, ok = os.LookupEnv(AzureTenantID); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, AzureTenantID))
 		}
 
-		if clientID, ok = os.LookupEnv(azureClientID); !ok {
-			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, azureClientID))
+		if clientID, ok = os.LookupEnv(AzureClientID); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, AzureClientID))
 		}
 
 		opts := azidentity.WorkloadIdentityCredentialOptions{}

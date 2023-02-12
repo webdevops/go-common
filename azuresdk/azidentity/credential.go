@@ -10,10 +10,17 @@ import (
 )
 
 const (
-	EnvAzureAuthorityHost      = "AZURE_AUTHORITY_HOST"
-	EnvAzureClientID           = "AZURE_CLIENT_ID"
-	EnvAzureFederatedTokenFile = "AZURE_FEDERATED_TOKEN_FILE"
-	EnvAzureTenantID           = "AZURE_TENANT_ID"
+	EnvAzureAdditionallyAllowedTenants = "AZURE_ADDITIONALLY_ALLOWED_TENANTS"
+	EnvAzureAuthorityHost              = "AZURE_AUTHORITY_HOST"
+	EnvAzureClientCertificatePassword  = "AZURE_CLIENT_CERTIFICATE_PASSWORD"
+	EnvAzureClientCertificatePath      = "AZURE_CLIENT_CERTIFICATE_PATH"
+	EnvAzureClientID                   = "AZURE_CLIENT_ID"
+	EnvAzureClientSecret               = "AZURE_CLIENT_SECRET"
+	EnvAzureFederatedTokenFile         = "AZURE_FEDERATED_TOKEN_FILE"
+	EnvAzurePassword                   = "AZURE_PASSWORD"
+	EnvAzureRegionalAuthorityName      = "AZURE_REGIONAL_AUTHORITY_NAME"
+	EnvAzureTenantID                   = "AZURE_TENANT_ID"
+	EnvAzureUsername                   = "AZURE_USERNAME"
 )
 
 func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {

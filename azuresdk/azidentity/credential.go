@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	EnvAzureEnvironment                = "AZURE_ENVIRONMENT"
 	EnvAzureAdditionallyAllowedTenants = "AZURE_ADDITIONALLY_ALLOWED_TENANTS"
 	EnvAzureAuthorityHost              = "AZURE_AUTHORITY_HOST"
 	EnvAzureClientCertificatePassword  = "AZURE_CLIENT_CERTIFICATE_PASSWORD"

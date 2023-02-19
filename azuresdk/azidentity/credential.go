@@ -13,10 +13,10 @@ const (
 	EnvAzureEnvironment                = "AZURE_ENVIRONMENT"
 	EnvAzureAdditionallyAllowedTenants = "AZURE_ADDITIONALLY_ALLOWED_TENANTS"
 	EnvAzureAuthorityHost              = "AZURE_AUTHORITY_HOST"
-	EnvAzureClientCertificatePassword  = "AZURE_CLIENT_CERTIFICATE_PASSWORD"
+	EnvAzureClientCertificatePassword  = "AZURE_CLIENT_CERTIFICATE_PASSWORD" //nolint:gosec,G101
 	EnvAzureClientCertificatePath      = "AZURE_CLIENT_CERTIFICATE_PATH"
 	EnvAzureClientID                   = "AZURE_CLIENT_ID"
-	EnvAzureClientSecret               = "AZURE_CLIENT_SECRET"
+	EnvAzureClientSecret               = "AZURE_CLIENT_SECRET" //nolint:gosec,G101
 	EnvAzureFederatedTokenFile         = "AZURE_FEDERATED_TOKEN_FILE"
 	EnvAzurePassword                   = "AZURE_PASSWORD"
 	EnvAzureRegionalAuthorityName      = "AZURE_REGIONAL_AUTHORITY_NAME"

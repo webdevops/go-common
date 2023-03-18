@@ -1,6 +1,7 @@
 package azidentity
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -30,32 +31,31 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 		// azurecli authentication
 		return NewAzCliCredential()
 	case "wi", "workload", "workloadidentity", "federation":
-		panic(`workload identity support is not yet supported`)
-		// var tokenFile, tenantID, clientID string
-		// var ok bool
-		//
-		// if _, ok = os.LookupEnv(EnvAzureAuthorityHost); !ok {
-		// 	panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureAuthorityHost))
-		// }
-		//
-		// if tokenFile, ok = os.LookupEnv(EnvAzureFederatedTokenFile); !ok {
-		// 	panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureFederatedTokenFile))
-		// }
-		//
-		// if tenantID, ok = os.LookupEnv(EnvAzureTenantID); !ok {
-		// 	panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureTenantID))
-		// }
-		//
-		// if clientID, ok = os.LookupEnv(EnvAzureClientID); !ok {
-		// 	panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureClientID))
-		// }
-		//
-		// opts := azidentity.WorkloadIdentityCredentialOptions{}
-		// if clientOptions != nil {
-		// 	opts.ClientOptions = *clientOptions
-		// }
-		//
-		// return azidentity.NewWorkloadIdentityCredential(tenantID, clientID, tokenFile, &opts)
+		var tokenFile, tenantID, clientID string
+		var ok bool
+
+		if _, ok = os.LookupEnv(EnvAzureAuthorityHost); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureAuthorityHost))
+		}
+
+		if tokenFile, ok = os.LookupEnv(EnvAzureFederatedTokenFile); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureFederatedTokenFile))
+		}
+
+		if tenantID, ok = os.LookupEnv(EnvAzureTenantID); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureTenantID))
+		}
+
+		if clientID, ok = os.LookupEnv(EnvAzureClientID); !ok {
+			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureClientID))
+		}
+
+		opts := azidentity.WorkloadIdentityCredentialOptions{}
+		if clientOptions != nil {
+			opts.ClientOptions = *clientOptions
+		}
+
+		return azidentity.NewWorkloadIdentityCredential(tenantID, clientID, tokenFile, &opts)
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.DefaultAzureCredentialOptions{}

@@ -106,33 +106,33 @@ func (c *Collector) collectionRestoreCache() bool {
 	}
 
 	if cacheContent, exists := c.cacheRead(); exists {
-		restoredMetrics := NewMetrics()
+		restoredMetrics := NewCollectorData()
 
 		c.logger.Infof(`trying to restore state from cache: %s`, c.cache.raw)
 
 		err := json.Unmarshal(cacheContent, &restoredMetrics)
 		if err != nil {
 			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
-			c.metrics = NewMetrics()
+			c.data = NewCollectorData()
 		} else {
 			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
 				// restore data
-				c.metrics.Expiry = restoredMetrics.Expiry
-				for name, restoreMetricList := range restoredMetrics.List {
+				c.data.Expiry = restoredMetrics.Expiry
+				for name, restoreMetricList := range restoredMetrics.Metrics {
 					if restoreMetricList.List == nil {
 						continue
 					}
 
-					if metricList, exists := c.metrics.List[name]; exists {
+					if metricList, exists := c.data.Metrics[name]; exists {
 						metricList.List = restoreMetricList.List
 						metricList.Init()
 					}
 				}
 
-				sleepTime := time.Until(*c.metrics.Expiry) + 1*time.Minute
+				sleepTime := time.Until(*c.data.Expiry) + 1*time.Minute
 				c.SetNextSleepDuration(sleepTime)
 
-				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.metrics.Expiry.UTC().String())
+				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
 				c.cacheRestoreEnabled = false
 				return true
 			} else {
@@ -152,12 +152,12 @@ func (c *Collector) collectionSaveCache() {
 	}
 
 	expiryTime := time.Now().Add(*c.sleepTime)
-	c.metrics.Expiry = &expiryTime
+	c.data.Expiry = &expiryTime
 
-	jsonData, _ := json.Marshal(c.metrics)
+	jsonData, _ := json.Marshal(c.data)
 	c.cacheStore(jsonData)
 
-	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.metrics.Expiry.UTC().String())
+	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
 }
 
 func (c *Collector) cacheRead() ([]byte, bool) {

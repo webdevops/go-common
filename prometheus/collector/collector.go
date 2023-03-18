@@ -39,8 +39,9 @@ type Collector struct {
 		counter   int64
 	}
 
+	data *CollectorData
+
 	registry *prometheus.Registry
-	metrics  *Metrics
 
 	concurrency int
 	waitGroup   *sizedwaitgroup.SizedWaitGroup
@@ -50,11 +51,25 @@ type Collector struct {
 	processor ProcessorInterface
 }
 
+type CollectorData struct {
+	Metrics map[string]*MetricList `json:"metrics"`
+	Data    map[string]interface{} `json:"data"`
+	Expiry  *time.Time             `json:"expiry"`
+}
+
+func NewCollectorData() *CollectorData {
+	return &CollectorData{
+		Metrics: map[string]*MetricList{},
+		Data:    map[string]interface{}{},
+		Expiry:  nil,
+	}
+}
+
 func New(name string, processor ProcessorInterface, logger *log.Logger) *Collector {
 	c := &Collector{}
 	c.context = context.Background()
 	c.Name = name
-	c.metrics = NewMetrics()
+	c.data = NewCollectorData()
 	c.processor = processor
 	c.concurrency = -1
 	c.panic.threshold = 5
@@ -221,7 +236,7 @@ func (c *Collector) collectRun(doCollect bool) {
 	c.processor.Reset()
 
 	// reset first
-	for _, metric := range c.metrics.List {
+	for _, metric := range c.data.Metrics {
 		if metric.reset {
 			switch vec := metric.vec.(type) {
 			case *prometheus.GaugeVec:
@@ -240,7 +255,7 @@ func (c *Collector) collectRun(doCollect bool) {
 	}
 
 	// set metrics from metrics
-	for _, metric := range c.metrics.List {
+	for _, metric := range c.data.Metrics {
 		switch vec := metric.vec.(type) {
 		case *prometheus.GaugeVec:
 			metric.GaugeSet(vec)
@@ -257,8 +272,19 @@ func (c *Collector) collectRun(doCollect bool) {
 	}
 }
 
+func (c *Collector) SetData(name string, val interface{}) {
+	c.data.Data[name] = val
+}
+
+func (c *Collector) GetData(name string) interface{} {
+	if val, exists := c.data.Data[name]; exists {
+		return val
+	}
+	return nil
+}
+
 func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool) *MetricList {
-	c.metrics.List[name] = &MetricList{
+	c.data.Metrics[name] = &MetricList{
 		MetricList: prometheusCommon.NewMetricsList(),
 		vec:        vec,
 		reset:      reset,
@@ -288,15 +314,15 @@ func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool)
 		}
 	}
 
-	return c.metrics.List[name]
+	return c.data.Metrics[name]
 }
 
 func (c *Collector) GetMetricList(name string) *MetricList {
-	return c.metrics.List[name]
+	return c.data.Metrics[name]
 }
 
 func (c *Collector) cleanupMetricLists() {
-	for _, metric := range c.metrics.List {
+	for _, metric := range c.data.Metrics {
 		metric.MetricList.Reset()
 	}
 }

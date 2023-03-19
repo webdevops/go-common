@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/robfig/cron"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	prometheusCommon "github.com/webdevops/go-common/prometheus"
 )
@@ -46,7 +46,7 @@ type Collector struct {
 	concurrency int
 	waitGroup   *sizedwaitgroup.SizedWaitGroup
 
-	logger *log.Entry
+	logger *zap.SugaredLogger
 
 	processor ProcessorInterface
 }
@@ -65,7 +65,7 @@ func NewCollectorData() *CollectorData {
 	}
 }
 
-func New(name string, processor ProcessorInterface, logger *log.Logger) *Collector {
+func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *Collector {
 	c := &Collector{}
 	c.context = context.Background()
 	c.Name = name
@@ -76,9 +76,7 @@ func New(name string, processor ProcessorInterface, logger *log.Logger) *Collect
 	c.panic.counter = 0
 	c.cacheRestoreEnabled = true
 	if logger != nil {
-		c.logger = logger.WithFields(log.Fields{
-			"collector": name,
-		})
+		c.logger = logger.With(zap.String(`collector`, name))
 	}
 	processor.Setup(c)
 
@@ -204,8 +202,6 @@ func (c *Collector) collectRun(doCollect bool) {
 					if c.panic.threshold == -1 || panicCounter <= c.panic.threshold {
 						if err := recover(); err != nil {
 							switch v := err.(type) {
-							case *log.Entry:
-								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Message)
 							case error:
 								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Error())
 							default:
@@ -345,9 +341,9 @@ func (c *Collector) collectionFinish() {
 	c.nextScrapeTime = &nextScrapeTime
 
 	if c.logger != nil {
-		c.logger.WithFields(log.Fields{
-			"duration": c.lastScrapeDuration.Seconds(),
-			"nextRun":  c.nextScrapeTime.UTC(),
-		}).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
+		c.logger.With(
+			zap.Float64("duration", c.lastScrapeDuration.Seconds()),
+			zap.Time("nextRun", c.nextScrapeTime.UTC()),
+		).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	cache "github.com/patrickmn/go-cache"
-	log "github.com/sirupsen/logrus"
+	zap "go.uber.org/zap"
 
 	commonAzidentity "github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
@@ -25,7 +25,7 @@ type (
 
 		cloud cloudconfig.CloudEnvironment
 
-		logger *log.Logger
+		logger *zap.SugaredLogger
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
@@ -39,7 +39,7 @@ type (
 )
 
 // NewArmClientFromEnvironment creates new Azure SDK ARM client from environment settings
-func NewArmClientFromEnvironment(logger *log.Logger) (*ArmClient, error) {
+func NewArmClientFromEnvironment(logger *zap.SugaredLogger) (*ArmClient, error) {
 	var azureEnvironment string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -50,7 +50,7 @@ func NewArmClientFromEnvironment(logger *log.Logger) (*ArmClient, error) {
 }
 
 // NewArmClient creates new Azure SDK ARM client
-func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) *ArmClient {
+func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredLogger) *ArmClient {
 	client := &ArmClient{}
 	client.cloud = cloudConfig
 
@@ -62,14 +62,14 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *log.Logger) 
 
 	client.TagManager = &ArmClientTagManager{
 		client: client,
-		logger: logger.WithField("component", "armClientTagManager").Logger,
+		logger: logger.With(zap.String("component", "armClientTagManager")),
 	}
 
 	return client
 }
 
 // NewArmClientWithCloudName creates new Azure SDK ARM client with environment name as string
-func NewArmClientWithCloudName(cloudName string, logger *log.Logger) (*ArmClient, error) {
+func NewArmClientWithCloudName(cloudName string, logger *zap.SugaredLogger) (*ArmClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
 		logger.Panic(err.Error())
@@ -97,7 +97,7 @@ func (azureClient *ArmClient) Connect() error {
 	}
 
 	if tokenInfo := commonAzidentity.ParseAccessToken(accessToken); tokenInfo != nil {
-		azureClient.logger.WithField("client", tokenInfo.ToMap()).Infof(`using Azure client: %v`, tokenInfo.ToString())
+		azureClient.logger.With(zap.Any("client", tokenInfo.ToMap())).Infof(`using Azure client: %v`, tokenInfo.ToString())
 	} else {
 		azureClient.logger.Warn(`unable to get Azure client information, cannot parse accesstoken`)
 	}

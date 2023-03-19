@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -54,7 +55,7 @@ func (azureClient *ArmClient) ListCachedResourceProviders(ctx context.Context, s
 		if err != nil {
 			return nil, err
 		}
-		azureClient.logger.WithField("subscriptionID", subscriptionID).Debugf("found %v Azure ResourceProviders", len(list))
+		azureClient.logger.With(zap.String(`subscriptionID`, subscriptionID)).Debugf("found %v Azure ResourceProviders", len(list))
 		return list, nil
 	})
 	if err != nil {

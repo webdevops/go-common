@@ -9,7 +9,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/remeh/sizedwaitgroup"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type (
@@ -21,7 +21,7 @@ type (
 	}
 )
 
-// Creates new Azure Subscription iterator from Azure ARM client
+// NewSubscriptionIterator Creates new Azure Subscription iterator from Azure ARM client
 func NewSubscriptionIterator(client *ArmClient, subscriptionID ...string) *SubscriptionsIterator {
 	i := SubscriptionsIterator{}
 	i.client = client
@@ -32,7 +32,7 @@ func NewSubscriptionIterator(client *ArmClient, subscriptionID ...string) *Subsc
 	return &i
 }
 
-// Set subscription id filter
+// SetSubscriptions Set subscription id filter
 func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *SubscriptionsIterator {
 	ctx := context.Background()
 	list, err := i.client.ListCachedSubscriptionsWithFilter(ctx, subscriptionID...)
@@ -44,32 +44,32 @@ func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *Subs
 	return i
 }
 
-// Set concurreny (for async loops)
+// SetConcurrency Set concurreny (for async loops)
 func (i *SubscriptionsIterator) SetConcurrency(concurrency int) *SubscriptionsIterator {
 	i.concurrency = concurrency
 	return i
 }
 
-// Loop for each Azure Subscription without concurrency
-func (i *SubscriptionsIterator) ForEach(logger *log.Entry, callback func(subscription *armsubscriptions.Subscription, logger *log.Entry)) error {
+// ForEach Loop for each Azure Subscription without concurrency
+func (i *SubscriptionsIterator) ForEach(logger *zap.SugaredLogger, callback func(subscription *armsubscriptions.Subscription, logger *zap.SugaredLogger)) error {
 	subscriptionList, err := i.ListSubscriptions()
 	if err != nil {
 		return err
 	}
 
 	for _, subscription := range subscriptionList {
-		contextLogger := logger.WithFields(log.Fields{
-			"subscriptionID":   *subscription.SubscriptionID,
-			"subscriptionName": *subscription.DisplayName,
-		})
+		contextLogger := logger.With(
+			zap.String(`subscriptionID`, *subscription.SubscriptionID),
+			zap.String(`subscriptionName`, *subscription.DisplayName),
+		)
 		callback(subscription, contextLogger)
 	}
 
 	return nil
 }
 
-// Loop for each Azure Subscription with concurrency as background gofunc
-func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(subscription *armsubscriptions.Subscription, logger *log.Entry)) error {
+// ForEachAsync Loop for each Azure Subscription with concurrency as background gofunc
+func (i *SubscriptionsIterator) ForEachAsync(logger *zap.SugaredLogger, callback func(subscription *armsubscriptions.Subscription, logger *zap.SugaredLogger)) error {
 	var panicList = []string{}
 	panicLock := sync.Mutex{}
 	wg := sizedwaitgroup.New(i.concurrency)
@@ -84,10 +84,10 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 
 		go func(subscription *armsubscriptions.Subscription) {
 			defer wg.Done()
-			contextLogger := logger.WithFields(log.Fields{
-				"subscriptionID":   *subscription.SubscriptionID,
-				"subscriptionName": *subscription.DisplayName,
-			})
+			contextLogger := logger.With(
+				zap.String(`subscriptionID`, *subscription.SubscriptionID),
+				zap.String(`subscriptionName`, *subscription.DisplayName),
+			)
 
 			finished := false
 			defer func() {
@@ -98,8 +98,6 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 
 						msg := ""
 						switch v := err.(type) {
-						case *log.Entry:
-							msg = fmt.Sprintf("panic: %s\n%s", v.Message, debug.Stack())
 						case error:
 							msg = fmt.Sprintf("panic: %s\n%s", v.Error(), debug.Stack())
 						default:
@@ -126,7 +124,7 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *log.Entry, callback func(su
 	return nil
 }
 
-// Returns list of subscriptions for looping
+// ListSubscriptions Returns list of subscriptions for looping
 func (i *SubscriptionsIterator) ListSubscriptions() (map[string]*armsubscriptions.Subscription, error) {
 	var list map[string]*armsubscriptions.Subscription
 

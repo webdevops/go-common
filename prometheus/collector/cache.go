@@ -62,7 +62,7 @@ func (c *Collector) SetCache(cache *string) {
 		}
 		c.cache.url = parsedUrl
 
-		azureClient, err := armclient.NewArmClientFromEnvironment(c.logger.Logger)
+		azureClient, err := armclient.NewArmClientFromEnvironment(c.logger)
 		if err != nil {
 			c.logger.Panic(err)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -25,7 +25,7 @@ const (
 type (
 	ArmClientTagManager struct {
 		client *ArmClient
-		logger *log.Logger
+		logger *zap.SugaredLogger
 	}
 )
 

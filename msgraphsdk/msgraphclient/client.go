@@ -9,8 +9,7 @@ import (
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/patrickmn/go-cache"
-
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
@@ -22,7 +21,7 @@ type (
 		cloud    cloudconfig.CloudEnvironment
 		tenantID string
 
-		logger *log.Logger
+		logger *zap.SugaredLogger
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
@@ -36,7 +35,7 @@ type (
 )
 
 // NewMsGraphClientFromEnvironment creates new MS Graph client from environment settings
-func NewMsGraphClientFromEnvironment(logger *log.Logger) (*MsGraphClient, error) {
+func NewMsGraphClientFromEnvironment(logger *zap.SugaredLogger) (*MsGraphClient, error) {
 	var azureEnvironment, azureTenant string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -51,7 +50,7 @@ func NewMsGraphClientFromEnvironment(logger *log.Logger) (*MsGraphClient, error)
 }
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *log.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *zap.SugaredLogger) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
 	client.tenantID = tenantID
@@ -66,7 +65,7 @@ func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string,
 }
 
 // NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
-func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *log.Logger) (*MsGraphClient, error) {
+func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *zap.SugaredLogger) (*MsGraphClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
 		logger.Panic(err.Error())

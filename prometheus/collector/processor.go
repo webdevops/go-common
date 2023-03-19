@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/remeh/sizedwaitgroup"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type (
@@ -24,7 +24,7 @@ func (p *Processor) Setup(collector *Collector) {
 	p.Collector = collector
 }
 
-func (p *Processor) Logger() *log.Entry {
+func (p *Processor) Logger() *zap.SugaredLogger {
 	return p.Collector.logger
 }
 

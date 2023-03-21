@@ -104,6 +104,14 @@ func (c *Collector) collectionRestoreCache() bool {
 	if !c.cacheRestoreEnabled {
 		return false
 	}
+	c.cacheRestoreEnabled = false
+
+	defer func() {
+		// restore failed, reset metrics
+		if err := recover(); err != nil {
+			c.data = NewCollectorData()
+		}
+	}()
 
 	if cacheContent, exists := c.cacheRead(); exists {
 		restoredMetrics := NewCollectorData()
@@ -133,15 +141,12 @@ func (c *Collector) collectionRestoreCache() bool {
 				c.SetNextSleepDuration(sleepTime)
 
 				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
-				c.cacheRestoreEnabled = false
 				return true
 			} else {
 				c.logger.Infof(`ignoring cached state, already expired`)
 			}
 		}
 	}
-
-	c.cacheRestoreEnabled = false
 
 	return false
 }

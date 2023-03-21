@@ -168,14 +168,37 @@ func (c *Collector) run() {
 	c.collectionStart()
 
 	// try restore from cache (first run only)
+	normalRun := true
 	if c.collectionRestoreCache() {
-		// metrics restored from cache, do not collect them
-		c.collectRun(false)
-	} else {
+		normalRun = false
+		// metrics restored from cache, do not collect them but try to restore them
+		func() {
+			defer func() {
+				// restore failed, reset metrics
+				if err := recover(); err != nil {
+					c.logger.Warnf(`caught panic while restore cached metrics: %v`, err)
+
+					c.logger.Info(`enabling normal collection run, ignoring and resetting cached metrics`)
+					c.resetMetrics()
+					c.cleanupMetricLists()
+
+					// enable normal run, we have to get metrics
+					// from the collector as restore failed
+					normalRun = true
+				}
+			}()
+
+			// try to restore metrics from cache
+			c.collectRun(false)
+		}()
+	}
+
+	if normalRun {
 		// metrics could not be restored from cache, start collect run
 		c.collectRun(true)
 		c.collectionSaveCache()
 	}
+
 	// cleanup internal metric lists (reduce memory load)
 	c.cleanupMetricLists()
 
@@ -192,6 +215,9 @@ func (c *Collector) collectRun(doCollect bool) {
 
 		go func() {
 			finished := false
+
+			// catch panics and increase panic counter
+			// pass through panics after panic counter exceeds threshold
 			defer func() {
 				close(callbackChannel)
 
@@ -211,6 +237,11 @@ func (c *Collector) collectRun(doCollect bool) {
 						}
 					}
 				}
+
+				if !panicDetected {
+					// reset panic counter after successful run without panics
+					atomic.StoreInt64(&c.panic.counter, 0)
+				}
 			}()
 
 			c.processor.Collect(callbackChannel)
@@ -228,22 +259,7 @@ func (c *Collector) collectRun(doCollect bool) {
 	lock.Lock()
 	defer lock.Unlock()
 
-	// reset metric values
-	c.processor.Reset()
-
-	// reset first
-	for _, metric := range c.data.Metrics {
-		if metric.reset {
-			switch vec := metric.vec.(type) {
-			case *prometheus.GaugeVec:
-				vec.Reset()
-			case *prometheus.HistogramVec:
-				vec.Reset()
-			case *prometheus.SummaryVec:
-				vec.Reset()
-			}
-		}
-	}
+	c.resetMetrics()
 
 	// process callbacks (set metrics)
 	for _, callback := range callbackList {
@@ -262,10 +278,26 @@ func (c *Collector) collectRun(doCollect bool) {
 		}
 	}
 
-	if !panicDetected {
-		// reset panic counter after successful run without panics
-		atomic.StoreInt64(&c.panic.counter, 0)
+}
+
+func (c *Collector) resetMetrics() {
+	// reset metric values
+	c.processor.Reset()
+
+	// reset first
+	for _, metric := range c.data.Metrics {
+		if metric.reset {
+			switch vec := metric.vec.(type) {
+			case *prometheus.GaugeVec:
+				vec.Reset()
+			case *prometheus.HistogramVec:
+				vec.Reset()
+			case *prometheus.SummaryVec:
+				vec.Reset()
+			}
+		}
 	}
+
 }
 
 func (c *Collector) SetData(name string, val interface{}) {

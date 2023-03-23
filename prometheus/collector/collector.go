@@ -233,7 +233,6 @@ func (c *Collector) collectRun(doCollect bool) {
 							default:
 								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v)
 							}
-
 						}
 					}
 				}

@@ -137,8 +137,12 @@ func (c *Collector) collectionRestoreCache() bool {
 					}
 				}
 
+				// calculate sleep time for next collect run
+				// but sleep time should not exceed defined scrape time
 				sleepTime := time.Until(*c.data.Expiry) + 1*time.Minute
-				c.SetNextSleepDuration(sleepTime)
+				if c.scrapeTime != nil && sleepTime < *c.scrapeTime {
+					c.SetNextSleepDuration(sleepTime)
+				}
 
 				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
 				return true

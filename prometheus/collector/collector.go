@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"sync/atomic"
 	"time"
@@ -37,6 +38,7 @@ type Collector struct {
 	panic struct {
 		threshold int64
 		counter   int64
+		backoff   []time.Duration
 	}
 
 	data *CollectorData
@@ -74,6 +76,11 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 	c.concurrency = -1
 	c.panic.threshold = 5
 	c.panic.counter = 0
+	c.panic.backoff = []time.Duration{
+		1 * time.Minute,
+		5 * time.Minute,
+		10 * time.Minute,
+	}
 	c.cacheRestoreEnabled = true
 	if logger != nil {
 		c.logger = logger.With(zap.String(`collector`, name))
@@ -128,6 +135,19 @@ func (c *Collector) GetLastScapeTime() *time.Time {
 
 func (c *Collector) GetNextScrapeTime() *time.Time {
 	return c.nextScrapeTime
+}
+
+func (c *Collector) SetBackoffDurations(val ...time.Duration) {
+	c.panic.backoff = val
+}
+
+func (c *Collector) backoffDuration() *time.Duration {
+	if len(c.panic.backoff) == 0 {
+		return nil
+	}
+
+	idx := int(math.Min(float64(c.panic.counter), float64(len(c.panic.backoff)))) - 1
+	return &c.panic.backoff[idx]
 }
 
 func (c *Collector) Start() error {
@@ -195,8 +215,14 @@ func (c *Collector) run() {
 
 	if normalRun {
 		// metrics could not be restored from cache, start collect run
-		c.collectRun(true)
-		c.collectionSaveCache()
+		if c.collectRun(true) {
+			c.collectionSaveCache()
+		} else {
+			if backoffDuration := c.backoffDuration(); backoffDuration != nil {
+				c.logger.Warnf(`detected unsuccessful run, will retry next run in %v`, backoffDuration.String())
+				c.SetNextSleepDuration(*backoffDuration)
+			}
+		}
 	}
 
 	// cleanup internal metric lists (reduce memory load)
@@ -206,7 +232,8 @@ func (c *Collector) run() {
 	c.collectionFinish()
 }
 
-func (c *Collector) collectRun(doCollect bool) {
+func (c *Collector) collectRun(doCollect bool) bool {
+	finished := false
 	var panicDetected bool
 	var callbackList []func()
 
@@ -214,8 +241,6 @@ func (c *Collector) collectRun(doCollect bool) {
 		callbackChannel := make(chan func())
 
 		go func() {
-			finished := false
-
 			// catch panics and increase panic counter
 			// pass through panics after panic counter exceeds threshold
 			defer func() {
@@ -277,6 +302,7 @@ func (c *Collector) collectRun(doCollect bool) {
 		}
 	}
 
+	return finished
 }
 
 func (c *Collector) resetMetrics() {

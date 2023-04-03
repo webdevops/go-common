@@ -144,6 +144,11 @@ func (c *Collector) collectionRestoreCache() bool {
 					c.SetNextSleepDuration(sleepTime)
 				}
 
+				// restore last scrape time from cache
+				if restoredMetrics.Created != nil {
+					c.lastScrapeTime = restoredMetrics.Created
+				}
+
 				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
 				return true
 			} else {
@@ -161,6 +166,7 @@ func (c *Collector) collectionSaveCache() {
 	}
 
 	expiryTime := time.Now().Add(*c.sleepTime)
+	c.data.Created = &c.collectionStartTime
 	c.data.Expiry = &expiryTime
 
 	jsonData, _ := json.Marshal(c.data)

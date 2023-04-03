@@ -56,7 +56,9 @@ type Collector struct {
 type CollectorData struct {
 	Metrics map[string]*MetricList `json:"metrics"`
 	Data    map[string]interface{} `json:"data"`
-	Expiry  *time.Time             `json:"expiry"`
+
+	Created *time.Time `json:"created"`
+	Expiry  *time.Time `json:"expiry"`
 }
 
 func NewCollectorData() *CollectorData {
@@ -387,6 +389,7 @@ func (c *Collector) cleanupMetricLists() {
 
 func (c *Collector) collectionStart() {
 	c.collectionStartTime = time.Now()
+	c.lastScrapeTime = nil
 
 	if c.logger != nil {
 		c.logger.Info("starting metrics collection")
@@ -394,7 +397,9 @@ func (c *Collector) collectionStart() {
 }
 
 func (c *Collector) collectionFinish() {
-	c.lastScrapeTime = &c.collectionStartTime
+	if c.lastScrapeTime != nil {
+		c.lastScrapeTime = &c.collectionStartTime
+	}
 
 	duration := time.Since(c.collectionStartTime)
 	c.lastScrapeDuration = &duration
@@ -411,5 +416,5 @@ func (c *Collector) collectionFinish() {
 
 	metricDuration.WithLabelValues(c.Name).Set(c.lastScrapeDuration.Seconds())
 	metricSuccess.WithLabelValues(c.Name).Set(1)
-	metricLastCollect.WithLabelValues(c.Name).SetToCurrentTime()
+	metricLastCollect.WithLabelValues(c.Name).Set(float64(c.lastScrapeTime.Second()))
 }

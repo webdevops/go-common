@@ -50,7 +50,7 @@ func (azureClient *ArmClient) IsResourceProviderRegistered(ctx context.Context, 
 // ListCachedResourceProviders return cached list of Azure Resource Providers as map (key is namespace)
 func (azureClient *ArmClient) ListCachedResourceProviders(ctx context.Context, subscriptionID string) (map[string]*armresources.Provider, error) {
 	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceProviders, subscriptionID), func() (interface{}, error) {
-		azureClient.logger.Debug("updating cached Azure ResourceProviders list")
+		azureClient.logger.With(zap.String("subscriptionID", subscriptionID)).Debug("updating cached Azure ResourceProviders list")
 		list, err := azureClient.ListResourceProviders(ctx, subscriptionID)
 		if err != nil {
 			return nil, err

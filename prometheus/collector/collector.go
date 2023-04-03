@@ -89,6 +89,9 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 
 	addCollectorToList(c)
 
+	metricInfo.WithLabelValues(c.Name).Set(1)
+	metricPanicCount.WithLabelValues(c.Name).Add(0)
+
 	return c
 }
 
@@ -218,6 +221,7 @@ func (c *Collector) run() {
 		if c.collectRun(true) {
 			c.collectionSaveCache()
 		} else {
+			metricSuccess.WithLabelValues(c.Name).Set(0)
 			if backoffDuration := c.backoffDuration(); backoffDuration != nil {
 				c.logger.Warnf(`detected unsuccessful run, will retry next run in %v`, backoffDuration.String())
 				c.SetNextSleepDuration(*backoffDuration)
@@ -249,6 +253,7 @@ func (c *Collector) collectRun(doCollect bool) bool {
 				if !finished {
 					panicDetected = true
 					atomic.AddInt64(&c.panic.counter, 1)
+					metricPanicCount.WithLabelValues(c.Name).Inc()
 					panicCounter := atomic.LoadInt64(&c.panic.counter)
 					if c.panic.threshold == -1 || panicCounter <= c.panic.threshold {
 						if err := recover(); err != nil {
@@ -403,4 +408,8 @@ func (c *Collector) collectionFinish() {
 			zap.Time("nextRun", c.nextScrapeTime.UTC()),
 		).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 	}
+
+	metricDuration.WithLabelValues(c.Name).Set(c.lastScrapeDuration.Seconds())
+	metricSuccess.WithLabelValues(c.Name).Set(1)
+	metricLastCollect.WithLabelValues(c.Name).SetToCurrentTime()
 }

@@ -397,7 +397,7 @@ func (c *Collector) collectionStart() {
 }
 
 func (c *Collector) collectionFinish() {
-	if c.lastScrapeTime != nil {
+	if c.lastScrapeTime == nil {
 		c.lastScrapeTime = &c.collectionStartTime
 	}
 
@@ -416,5 +416,5 @@ func (c *Collector) collectionFinish() {
 
 	metricDuration.WithLabelValues(c.Name).Set(c.lastScrapeDuration.Seconds())
 	metricSuccess.WithLabelValues(c.Name).Set(1)
-	metricLastCollect.WithLabelValues(c.Name).Set(float64(c.lastScrapeTime.Second()))
+	metricLastCollect.WithLabelValues(c.Name).Set(float64(c.lastScrapeTime.Unix()))
 }

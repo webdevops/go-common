@@ -50,12 +50,16 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 			panic(fmt.Sprintf(`missing environment variable "%s" for workload identity. Check webhook and pod configuration`, EnvAzureClientID))
 		}
 
-		opts := azidentity.WorkloadIdentityCredentialOptions{}
+		opts := azidentity.WorkloadIdentityCredentialOptions{
+			ClientID:      clientID,
+			TenantID:      tenantID,
+			TokenFilePath: tokenFile,
+		}
 		if clientOptions != nil {
 			opts.ClientOptions = *clientOptions
 		}
 
-		return azidentity.NewWorkloadIdentityCredential(tenantID, clientID, tokenFile, &opts)
+		return azidentity.NewWorkloadIdentityCredential(&opts)
 	default:
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.DefaultAzureCredentialOptions{}

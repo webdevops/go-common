@@ -5,11 +5,11 @@ go 1.20
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.5.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0-beta.5
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.0
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.1.0
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.1.1
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.1.1
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0
 	github.com/microsoft/kiota-authentication-azure-go v0.6.0
-	github.com/microsoftgraph/msgraph-sdk-go v0.61.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.64.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.15.0
 	github.com/remeh/sizedwaitgroup v1.0.0
@@ -22,7 +22,7 @@ require (
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.9.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cjlapao/common-go v0.0.39 // indirect
@@ -35,11 +35,11 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/microsoft/kiota-abstractions-go v0.19.1 // indirect
-	github.com/microsoft/kiota-http-go v0.16.1 // indirect
+	github.com/microsoft/kiota-http-go v0.16.2 // indirect
 	github.com/microsoft/kiota-serialization-form-go v0.9.1 // indirect
-	github.com/microsoft/kiota-serialization-json-go v0.9.1 // indirect
-	github.com/microsoft/kiota-serialization-text-go v0.7.0 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go-core v0.36.0 // indirect
+	github.com/microsoft/kiota-serialization-json-go v0.9.2 // indirect
+	github.com/microsoft/kiota-serialization-text-go v0.7.1 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v0.36.1 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect

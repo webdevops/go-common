@@ -100,12 +100,6 @@ func (c *Collector) collectionRestoreCache() bool {
 		return false
 	}
 
-	// restore only after startup
-	if !c.cacheRestoreEnabled {
-		return false
-	}
-	c.cacheRestoreEnabled = false
-
 	defer func() {
 		// restore failed, reset metrics
 		if err := recover(); err != nil {

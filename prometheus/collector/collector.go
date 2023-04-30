@@ -31,9 +31,9 @@ type Collector struct {
 	lastScrapeTime      *time.Time
 	nextScrapeTime      *time.Time
 	collectionStartTime time.Time
+	collectionFirstRun  bool
 
-	cache               *cacheSpecDef
-	cacheRestoreEnabled bool
+	cache *cacheSpecDef
 
 	panic struct {
 		threshold int64
@@ -83,7 +83,7 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 		5 * time.Minute,
 		10 * time.Minute,
 	}
-	c.cacheRestoreEnabled = true
+	c.collectionFirstRun = true
 	if logger != nil {
 		c.logger = logger.With(zap.String(`collector`, name))
 	}
@@ -194,7 +194,7 @@ func (c *Collector) run() {
 
 	// try restore from cache (first run only)
 	normalRun := true
-	if c.collectionRestoreCache() {
+	if c.collectionFirstRun && c.collectionRestoreCache() {
 		normalRun = false
 		// metrics restored from cache, do not collect them but try to restore them
 		func() {
@@ -417,4 +417,8 @@ func (c *Collector) collectionFinish() {
 	metricDuration.WithLabelValues(c.Name).Set(c.lastScrapeDuration.Seconds())
 	metricSuccess.WithLabelValues(c.Name).Set(1)
 	metricLastCollect.WithLabelValues(c.Name).Set(float64(c.lastScrapeTime.Unix()))
+
+	if c.collectionFirstRun {
+		c.collectionFirstRun = false
+	}
 }

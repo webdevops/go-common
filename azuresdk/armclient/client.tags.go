@@ -326,6 +326,7 @@ func (tagmgr *ArmClientTagManager) parseTagConfig(tag, labelPrefix string) (Reso
 	if strings.Contains(config.Name, AzureTagOptionCharacter) {
 		if parts := strings.SplitN(config.Name, AzureTagOptionCharacter, 2); len(parts) == 2 {
 			config.Name = parts[0]
+			config.TargetName = parts[0]
 			options, err = url.ParseQuery(parts[1])
 			if err != nil {
 				return config, err

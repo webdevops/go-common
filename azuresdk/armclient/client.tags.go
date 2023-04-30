@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
@@ -14,7 +15,13 @@ import (
 	"github.com/webdevops/go-common/utils/to"
 )
 
+var (
+	azureTagNameToPrometheusNameRegExp = regexp.MustCompile("[^_a-zA-Z0-9]")
+)
+
 const (
+	AzurePrometheusLabelPrefix = "tag_"
+
 	AzureTagOptionCharacter = "?"
 
 	AzureTagSourceResource      = "resource"
@@ -38,7 +45,8 @@ type (
 	}
 
 	ResourceTagConfig struct {
-		Tags []ResourceTagConfigTag
+		Tags   []ResourceTagConfigTag
+		client *ArmClient
 	}
 
 	ResourceTagConfigTag struct {
@@ -279,28 +287,14 @@ func (tagmgr *ArmClientTagManager) GetTagsForResource(ctx context.Context, resou
 	return tags.TagsResource.Properties, nil
 }
 
-// AddResourceTagsToPrometheusLabels adds resource tags to prometheus labels
-func (tagmgr *ArmClientTagManager) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string, config ResourceTagConfig) prometheus.Labels {
-	resourceTags, err := tagmgr.GetResourceTag(ctx, resourceID, config)
-	if err != nil {
-		tagmgr.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
-		return labels
-	}
-
-	for _, tag := range resourceTags {
-		labels[tag.TargetName] = tag.TagValue
-	}
-
-	return labels
-}
-
 func (tagmgr *ArmClientTagManager) ParseTagConfig(tags []string) (ResourceTagConfig, error) {
 	return tagmgr.ParseTagConfigWithCustomPrefix(tags, AzurePrometheusLabelPrefix)
 }
 
 func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string, labelPrefix string) (ResourceTagConfig, error) {
 	config := ResourceTagConfig{
-		Tags: make([]ResourceTagConfigTag, len(tags)),
+		Tags:   make([]ResourceTagConfigTag, len(tags)),
+		client: tagmgr.client,
 	}
 
 	i := 0
@@ -380,5 +374,20 @@ func (c *ResourceTagConfig) AddToPrometheusLabels(labels []string) []string {
 	for _, tagConfig := range c.Tags {
 		labels = append(labels, tagConfig.TargetName)
 	}
+	return labels
+}
+
+// AddResourceTagsToPrometheusLabels adds resource tags to prometheus labels
+func (c *ResourceTagConfig) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string, config ResourceTagConfig) prometheus.Labels {
+	resourceTags, err := c.client.TagManager.GetResourceTag(ctx, resourceID, config)
+	if err != nil {
+		c.client.TagManager.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
+		return labels
+	}
+
+	for _, tag := range resourceTags {
+		labels[tag.TargetName] = tag.TagValue
+	}
+
 	return labels
 }

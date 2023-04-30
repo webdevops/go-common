@@ -287,12 +287,12 @@ func (tagmgr *ArmClientTagManager) GetTagsForResource(ctx context.Context, resou
 	return tags.TagsResource.Properties, nil
 }
 
-func (tagmgr *ArmClientTagManager) ParseTagConfig(tags []string) (ResourceTagManager, error) {
+func (tagmgr *ArmClientTagManager) ParseTagConfig(tags []string) (*ResourceTagManager, error) {
 	return tagmgr.ParseTagConfigWithCustomPrefix(tags, AzurePrometheusLabelPrefix)
 }
 
-func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string, labelPrefix string) (ResourceTagManager, error) {
-	config := ResourceTagManager{
+func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string, labelPrefix string) (*ResourceTagManager, error) {
+	config := &ResourceTagManager{
 		Tags:   make([]ResourceTagConfigTag, len(tags)),
 		client: tagmgr.client,
 	}

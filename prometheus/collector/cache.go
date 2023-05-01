@@ -100,23 +100,13 @@ func (c *Collector) collectionRestoreCache() bool {
 		return false
 	}
 
-	defer func() {
-		// restore failed, reset metrics
-		if err := recover(); err != nil {
-			c.data = NewCollectorData()
-		}
-	}()
-
 	if cacheContent, exists := c.cacheRead(); exists {
 		restoredMetrics := NewCollectorData()
 
-		c.logger.Infof(`trying to restore state from cache: %s`, c.cache.raw)
+		c.logger.Infof(`restoring state from cache: %s`, c.cache.raw)
 
 		err := json.Unmarshal(cacheContent, &restoredMetrics)
-		if err != nil {
-			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
-			c.data = NewCollectorData()
-		} else {
+		if err == nil {
 			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
 				// restore data
 				c.data.Expiry = restoredMetrics.Expiry
@@ -148,6 +138,8 @@ func (c *Collector) collectionRestoreCache() bool {
 			} else {
 				c.logger.Infof(`ignoring cached state, already expired`)
 			}
+		} else {
+			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
 		}
 	}
 
@@ -163,10 +155,13 @@ func (c *Collector) collectionSaveCache() {
 	c.data.Created = &c.collectionStartTime
 	c.data.Expiry = &expiryTime
 
-	jsonData, _ := json.Marshal(c.data)
-	c.cacheStore(jsonData)
+	if jsonData, err := json.Marshal(c.data); err == nil {
+		c.cacheStore(jsonData)
+		c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
+	} else {
+		c.logger.Errorf(`failed to serialize state for cache: %v`, err.Error())
+	}
 
-	c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
 }
 
 func (c *Collector) cacheRead() ([]byte, bool) {

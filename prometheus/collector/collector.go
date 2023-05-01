@@ -31,7 +31,6 @@ type Collector struct {
 	lastScrapeTime      *time.Time
 	nextScrapeTime      *time.Time
 	collectionStartTime time.Time
-	collectionFirstRun  bool
 
 	cache *cacheSpecDef
 
@@ -83,7 +82,6 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 		5 * time.Minute,
 		10 * time.Minute,
 	}
-	c.collectionFirstRun = true
 	if logger != nil {
 		c.logger = logger.With(zap.String(`collector`, name))
 	}
@@ -172,12 +170,20 @@ func (c *Collector) Start() error {
 	if c.scrapeTime != nil {
 		// scrape time execution
 		go func() {
-			// randomize collector start times
-			startTimeOffset := float64(5)
-			startTimeRandom := float64(5)
-			startupWaitTime := time.Duration((rand.Float64()*startTimeRandom)+startTimeOffset) * time.Second // #nosec:G404 random value only used for startup time
-			time.Sleep(startupWaitTime)
+			if c.cache != nil && c.runCacheRestore() {
+				// wait until next run
+				time.Sleep(*c.sleepTime)
+			} else {
+				// randomize collector start times
+				startTimeOffset := float64(5)
+				startTimeRandom := float64(5)
+				startupWaitTime := time.Duration((rand.Float64()*startTimeRandom)+startTimeOffset) * time.Second // #nosec:G404 random value only used for startup time
 
+				// normal startup or failed restore, random startup wait time
+				time.Sleep(startupWaitTime)
+			}
+
+			// normal run, endless loop
 			for {
 				c.run()
 				time.Sleep(*c.sleepTime)
@@ -190,7 +196,7 @@ func (c *Collector) Start() error {
 	return nil
 }
 
-func (c *Collector) run() {
+func (c *Collector) runCacheRestore() (result bool) {
 	// set next sleep duration (automatic calculation, can be overwritten by collect)
 	c.SetNextSleepDuration(*c.scrapeTime)
 
@@ -200,10 +206,8 @@ func (c *Collector) run() {
 	// start collection
 	c.collectionStart()
 
-	// try restore from cache (first run only)
-	normalRun := true
-	if c.collectionFirstRun && c.collectionRestoreCache() {
-		normalRun = false
+	result = true
+	if c.collectionRestoreCache() {
 		// metrics restored from cache, do not collect them but try to restore them
 		func() {
 			defer func() {
@@ -213,11 +217,19 @@ func (c *Collector) run() {
 
 					c.logger.Info(`enabling normal collection run, ignoring and resetting cached metrics`)
 					c.resetMetrics()
-					c.cleanupMetricLists()
+					result = false
+				}
 
-					// enable normal run, we have to get metrics
-					// from the collector as restore failed
-					normalRun = true
+				c.cleanupMetricLists()
+
+				// finish run and calculate next run
+				c.collectionFinish()
+
+				if result {
+					c.logger.With(
+						zap.Float64("duration", c.lastScrapeDuration.Seconds()),
+						zap.Time("nextRun", c.nextScrapeTime.UTC()),
+					).Infof("finished cache restore, next run in %s", c.sleepTime.String())
 				}
 			}()
 
@@ -226,16 +238,29 @@ func (c *Collector) run() {
 		}()
 	}
 
-	if normalRun {
-		// metrics could not be restored from cache, start collect run
-		if c.collectRun(true) {
-			c.collectionSaveCache()
-		} else {
-			metricSuccess.WithLabelValues(c.Name).Set(0)
-			if backoffDuration := c.backoffDuration(); backoffDuration != nil {
-				c.logger.Warnf(`detected unsuccessful run, will retry next run in %v`, backoffDuration.String())
-				c.SetNextSleepDuration(*backoffDuration)
-			}
+	return
+}
+
+func (c *Collector) run() {
+	c.logger.Info("starting metrics collection")
+
+	// set next sleep duration (automatic calculation, can be overwritten by collect)
+	c.SetNextSleepDuration(*c.scrapeTime)
+
+	// cleanup internal metric lists (to ensure clean metric lists)
+	c.cleanupMetricLists()
+
+	// start collection
+	c.collectionStart()
+
+	// metrics could not be restored from cache, start collect run
+	if c.collectRun(true) {
+		c.collectionSaveCache()
+	} else {
+		metricSuccess.WithLabelValues(c.Name).Set(0)
+		if backoffDuration := c.backoffDuration(); backoffDuration != nil {
+			c.logger.Warnf(`detected unsuccessful run, will retry next run in %v`, backoffDuration.String())
+			c.SetNextSleepDuration(*backoffDuration)
 		}
 	}
 
@@ -244,6 +269,11 @@ func (c *Collector) run() {
 
 	// finish run and calculate next run
 	c.collectionFinish()
+
+	c.logger.With(
+		zap.Float64("duration", c.lastScrapeDuration.Seconds()),
+		zap.Time("nextRun", c.nextScrapeTime.UTC()),
+	).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 }
 
 func (c *Collector) collectRun(doCollect bool) bool {
@@ -406,10 +436,6 @@ func (c *Collector) cleanupMetricLists() {
 func (c *Collector) collectionStart() {
 	c.collectionStartTime = time.Now()
 	c.lastScrapeTime = nil
-
-	if c.logger != nil {
-		c.logger.Info("starting metrics collection")
-	}
 }
 
 func (c *Collector) collectionFinish() {
@@ -423,18 +449,7 @@ func (c *Collector) collectionFinish() {
 	nextScrapeTime := time.Now().Add(*c.sleepTime)
 	c.nextScrapeTime = &nextScrapeTime
 
-	if c.logger != nil {
-		c.logger.With(
-			zap.Float64("duration", c.lastScrapeDuration.Seconds()),
-			zap.Time("nextRun", c.nextScrapeTime.UTC()),
-		).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
-	}
-
 	metricDuration.WithLabelValues(c.Name).Set(c.lastScrapeDuration.Seconds())
 	metricSuccess.WithLabelValues(c.Name).Set(1)
 	metricLastCollect.WithLabelValues(c.Name).Set(float64(c.lastScrapeTime.Unix()))
-
-	if c.collectionFirstRun {
-		c.collectionFirstRun = false
-	}
 }

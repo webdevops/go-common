@@ -306,6 +306,8 @@ func (c *Collector) collectRun(doCollect bool) bool {
 			metric.HistogramSet(vec)
 		case *prometheus.SummaryVec:
 			metric.SummarySet(vec)
+		case *prometheus.CounterVec:
+			metric.CounterAdd(vec)
 		}
 	}
 
@@ -325,6 +327,8 @@ func (c *Collector) resetMetrics() {
 			case *prometheus.HistogramVec:
 				vec.Reset()
 			case *prometheus.SummaryVec:
+				vec.Reset()
+			case *prometheus.CounterVec:
 				vec.Reset()
 			}
 		}
@@ -358,6 +362,8 @@ func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool)
 			c.registry.MustRegister(vec)
 		case *prometheus.SummaryVec:
 			c.registry.MustRegister(vec)
+		case *prometheus.CounterVec:
+			c.registry.MustRegister(vec)
 		default:
 			panic(`not allowed prometheus metric vec found`)
 		}
@@ -368,6 +374,8 @@ func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool)
 		case *prometheus.HistogramVec:
 			prometheus.MustRegister(vec)
 		case *prometheus.SummaryVec:
+			prometheus.MustRegister(vec)
+		case *prometheus.CounterVec:
 			prometheus.MustRegister(vec)
 		default:
 			panic(`not allowed prometheus metric vec found`)

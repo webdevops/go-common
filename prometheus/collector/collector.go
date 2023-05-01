@@ -106,8 +106,16 @@ func (c *Collector) SetCronSpec(cron *cron.Cron, cronSpec string) {
 	c.cronSpec = &cronSpec
 }
 
+func (c *Collector) GetCronSpec() *string {
+	return c.cronSpec
+}
+
 func (c *Collector) SetScapeTime(scrapeTime time.Duration) {
 	c.scrapeTime = &scrapeTime
+}
+
+func (c *Collector) GetScapeTime() *time.Duration {
+	return c.scrapeTime
 }
 
 func (c *Collector) SetNextSleepDuration(sleepDuration time.Duration) {

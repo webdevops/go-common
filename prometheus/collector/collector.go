@@ -95,6 +95,20 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 	return c
 }
 
+func (c *Collector) IsEnabled() (status bool) {
+	status = false
+
+	if c.cronSpec != nil {
+		status = true
+	}
+
+	if c.scrapeTime != nil && c.scrapeTime.Seconds() > 0 {
+		status = true
+	}
+
+	return
+}
+
 func (c *Collector) SetPanicThreshold(threshold int64) {
 	c.panic.threshold = threshold
 }

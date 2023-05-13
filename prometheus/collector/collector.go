@@ -60,6 +60,7 @@ type CollectorData struct {
 	Expiry  *time.Time `json:"expiry"`
 }
 
+// NewCollectorData creates new collector data struct
 func NewCollectorData() *CollectorData {
 	return &CollectorData{
 		Metrics: map[string]*MetricList{},
@@ -68,6 +69,7 @@ func NewCollectorData() *CollectorData {
 	}
 }
 
+// New creates new collector
 func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *Collector {
 	c := &Collector{}
 	c.context = context.Background()
@@ -95,6 +97,7 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 	return c
 }
 
+// IsEnabled returns if all requirements are fulfilled to start collector
 func (c *Collector) IsEnabled() (status bool) {
 	status = false
 
@@ -109,63 +112,98 @@ func (c *Collector) IsEnabled() (status bool) {
 	return
 }
 
+// SetPanicThreshold set threshold of panics in a row until panics are thrown
 func (c *Collector) SetPanicThreshold(threshold int64) {
 	c.panic.threshold = threshold
 }
 
+// GetPanicThreshold returns panic threshold count
+func (c *Collector) GetPanicThreshold() int64 {
+	return c.panic.threshold
+}
+
+// SetPanicBackoffDurations set backoff duration for panics
+func (c *Collector) SetPanicBackoffDurations(val ...time.Duration) {
+	c.panic.backoff = val
+}
+
+// GetPanicBackoffDurations returns panic backoff durations
+func (c *Collector) GetPanicBackoffDurations() []time.Duration {
+	return c.panic.backoff
+}
+
+// SetCronSpec sets cronspec for collector (using cron for schedule)
 func (c *Collector) SetCronSpec(cron *cron.Cron, cronSpec string) {
 	c.cron = cron
 	c.cronSpec = &cronSpec
 }
 
+// GetCronSpec return cronspec (if set)
 func (c *Collector) GetCronSpec() *string {
 	return c.cronSpec
 }
 
+// SetScapeTime set fixed scrape time in time.Duration
 func (c *Collector) SetScapeTime(scrapeTime time.Duration) {
 	c.scrapeTime = &scrapeTime
 }
 
+// GetScapeTime return scrape time
 func (c *Collector) GetScapeTime() *time.Duration {
 	return c.scrapeTime
 }
 
+// SetNextSleepDuration set next sleep duration for next run
 func (c *Collector) SetNextSleepDuration(sleepDuration time.Duration) {
 	c.sleepTime = &sleepDuration
 }
 
+// SetContext set context of collector
 func (c *Collector) SetContext(ctx context.Context) {
 	c.context = ctx
 }
 
+// GetContext returns collector context
+func (c *Collector) GetContext() context.Context {
+	return c.context
+}
+
+// SetConcurrency set global concurrency for collector
 func (c *Collector) SetConcurrency(concurrency int) {
 	c.concurrency = concurrency
 }
 
+// GetConcurrency returns global collector concurrency
+func (c *Collector) GetConcurrency() int {
+	return c.concurrency
+}
+
+// SetPrometheusRegistry set prometheus metric registry
 func (c *Collector) SetPrometheusRegistry(registry *prometheus.Registry) {
 	c.registry = registry
 }
 
+// GetPrometheusRegistry returns prometheus metric registry
 func (c *Collector) GetPrometheusRegistry() *prometheus.Registry {
 	return c.registry
 }
 
+// GetLastScrapeDuration returns last scrape duration
 func (c *Collector) GetLastScrapeDuration() *time.Duration {
 	return c.lastScrapeDuration
 }
 
+// GetLastScapeTime returns last scrape time
 func (c *Collector) GetLastScapeTime() *time.Time {
 	return c.lastScrapeTime
 }
 
+// GetNextScrapeTime returns next scrape time
 func (c *Collector) GetNextScrapeTime() *time.Time {
 	return c.nextScrapeTime
 }
 
-func (c *Collector) SetBackoffDurations(val ...time.Duration) {
-	c.panic.backoff = val
-}
-
+// backoffDuration returns the calculated backoff duration
 func (c *Collector) backoffDuration() *time.Duration {
 	if len(c.panic.backoff) == 0 {
 		return nil
@@ -175,6 +213,7 @@ func (c *Collector) backoffDuration() *time.Duration {
 	return &c.panic.backoff[idx]
 }
 
+// Start starts the collector run in background func
 func (c *Collector) Start() error {
 	if c.waitGroup == nil {
 		wg := sizedwaitgroup.New(c.concurrency)
@@ -210,6 +249,7 @@ func (c *Collector) Start() error {
 	return nil
 }
 
+// runCacheRestore tries to restore metrics from cache and returns true if restore was successfull
 func (c *Collector) runCacheRestore() (result bool) {
 	// set next sleep duration (automatic calculation, can be overwritten by collect)
 	c.SetNextSleepDuration(*c.scrapeTime)
@@ -255,6 +295,7 @@ func (c *Collector) runCacheRestore() (result bool) {
 	return
 }
 
+// run starts normal metrics run
 func (c *Collector) run() {
 	c.logger.Info("starting metrics collection")
 
@@ -290,6 +331,7 @@ func (c *Collector) run() {
 	).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
 }
 
+// collectRun starts collector run and handles panics
 func (c *Collector) collectRun(doCollect bool) bool {
 	finished := false
 	var panicDetected bool
@@ -366,6 +408,7 @@ func (c *Collector) collectRun(doCollect bool) bool {
 	return finished
 }
 
+// resetMetrics calls processor reset and resets registered metrics (if reset is enabled)
 func (c *Collector) resetMetrics() {
 	// reset metric values
 	c.processor.Reset()
@@ -388,10 +431,12 @@ func (c *Collector) resetMetrics() {
 
 }
 
+// SetData stores additional data which also is stored/restored in cache
 func (c *Collector) SetData(name string, val interface{}) {
 	c.data.Data[name] = val
 }
 
+// GetData returns additional data which also is stored/restored in cache
 func (c *Collector) GetData(name string) interface{} {
 	if val, exists := c.data.Data[name]; exists {
 		return val
@@ -399,6 +444,7 @@ func (c *Collector) GetData(name string) interface{} {
 	return nil
 }
 
+// RegisterMetricList register new managed prometheus metric vec
 func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool) *MetricList {
 	c.data.Metrics[name] = &MetricList{
 		MetricList: prometheusCommon.NewMetricsList(),
@@ -437,21 +483,25 @@ func (c *Collector) RegisterMetricList(name string, vec interface{}, reset bool)
 	return c.data.Metrics[name]
 }
 
+// GetMetricList returns managed metric vec
 func (c *Collector) GetMetricList(name string) *MetricList {
 	return c.data.Metrics[name]
 }
 
+// cleanupMetricLists resets all registered metric vec
 func (c *Collector) cleanupMetricLists() {
 	for _, metric := range c.data.Metrics {
 		metric.MetricList.Reset()
 	}
 }
 
+// collectionStart processes collection start
 func (c *Collector) collectionStart() {
 	c.collectionStartTime = time.Now()
 	c.lastScrapeTime = nil
 }
 
+// collectionFinish processes collection finish
 func (c *Collector) collectionFinish() {
 	if c.lastScrapeTime == nil {
 		c.lastScrapeTime = &c.collectionStartTime

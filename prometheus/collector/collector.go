@@ -53,12 +53,20 @@ type Collector struct {
 }
 
 type CollectorData struct {
+	// metric lists
 	Metrics map[string]*MetricList `json:"metrics"`
-	Data    map[string]interface{} `json:"data"`
 
+	// custom data
+	Data map[string]interface{} `json:"data"`
+
+	// only used for debugging purposes
 	Created *time.Time `json:"created"`
-	Expiry  *time.Time `json:"expiry"`
-	Tag     *string    `json:"tag"`
+
+	// used for cache expiry
+	Expiry *time.Time `json:"expiry"`
+
+	// used for reload enforcement if tag mismatches
+	Tag *string `json:"tag"`
 }
 
 // NewCollectorData creates new collector data struct

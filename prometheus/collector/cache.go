@@ -13,12 +13,15 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 
 	armclient "github.com/webdevops/go-common/azuresdk/armclient"
+	"github.com/webdevops/go-common/utils/to"
 )
 
 type (
 	cacheSpecDef struct {
 		protocol string
 		url      *url.URL
+
+		tag *string
 
 		raw string
 
@@ -33,11 +36,18 @@ const (
 	cacheProtocolAzBlob = "azblob"
 )
 
-func (c *Collector) EnableCache(cache string) {
-	c.SetCache(&cache)
+// EnableCache alias of SetCache
+func (c *Collector) EnableCache(cache string, cacheTag *string) {
+	c.SetCache(&cache, cacheTag)
 }
 
-func (c *Collector) SetCache(cache *string) {
+// SetCache enables caching of collector with local file and azblob support
+//
+//	  cache can be specified as local file or storageaccount blob:
+//	    path or file://path/to/file will store cached metrics in file
+//		   azblob://storageaccount.blob.core.windows.net/container/blob will store cached metrics in storageaccount
+//		 cacheTag is used to force restore, if nil cacheTag is ignored and otherwise enforced
+func (c *Collector) SetCache(cache *string, cacheTag *string) {
 	if cache == nil {
 		c.cache = nil
 		return
@@ -48,6 +58,7 @@ func (c *Collector) SetCache(cache *string) {
 	c.cache = &cacheSpecDef{
 		raw:  rawSpec,
 		spec: map[string]string{},
+		tag:  cacheTag,
 	}
 
 	switch {
@@ -91,26 +102,36 @@ func (c *Collector) SetCache(cache *string) {
 	}
 }
 
+// DisableCache disables all caching
 func (c *Collector) DisableCache() {
 	c.cache = nil
 }
 
+// collectionRestoreCache tries to restore metrics from cache
 func (c *Collector) collectionRestoreCache() bool {
 	if c.cache == nil {
 		return false
 	}
 
 	if cacheContent, exists := c.cacheRead(); exists {
-		restoredMetrics := NewCollectorData()
+		restoredData := NewCollectorData()
 
 		c.logger.Infof(`restoring state from cache: %s`, c.cache.raw)
 
-		err := json.Unmarshal(cacheContent, &restoredMetrics)
+		err := json.Unmarshal(cacheContent, &restoredData)
 		if err == nil {
-			if restoredMetrics.Expiry != nil && restoredMetrics.Expiry.After(time.Now()) {
+			if c.cache.tag != nil {
+				if restoredData.Tag == nil || to.String(c.cache.tag) != to.String(restoredData.Tag) {
+					// cache tag check is enforced but there is a mismatch
+					c.logger.Infof(`cache tag mismatch, ignoring cache`)
+					return false
+				}
+			}
+
+			if restoredData.Expiry != nil && restoredData.Expiry.After(time.Now()) {
 				// restore data
-				c.data.Expiry = restoredMetrics.Expiry
-				for name, restoreMetricList := range restoredMetrics.Metrics {
+				c.data.Expiry = restoredData.Expiry
+				for name, restoreMetricList := range restoredData.Metrics {
 					if restoreMetricList.List == nil {
 						continue
 					}
@@ -129,8 +150,8 @@ func (c *Collector) collectionRestoreCache() bool {
 				}
 
 				// restore last scrape time from cache
-				if restoredMetrics.Created != nil {
-					c.lastScrapeTime = restoredMetrics.Created
+				if restoredData.Created != nil {
+					c.lastScrapeTime = restoredData.Created
 				}
 
 				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
@@ -146,6 +167,7 @@ func (c *Collector) collectionRestoreCache() bool {
 	return false
 }
 
+// collectionSaveCache saves current metrics to cache
 func (c *Collector) collectionSaveCache() {
 	if c.cache == nil {
 		return
@@ -154,6 +176,7 @@ func (c *Collector) collectionSaveCache() {
 	expiryTime := time.Now().Add(*c.sleepTime)
 	c.data.Created = &c.collectionStartTime
 	c.data.Expiry = &expiryTime
+	c.data.Tag = c.cache.tag
 
 	if jsonData, err := json.Marshal(c.data); err == nil {
 		c.cacheStore(jsonData)
@@ -164,6 +187,7 @@ func (c *Collector) collectionSaveCache() {
 
 }
 
+// cacheRead reads content from cache
 func (c *Collector) cacheRead() ([]byte, bool) {
 	switch c.cache.protocol {
 	case cacheProtocolFile:
@@ -184,6 +208,7 @@ func (c *Collector) cacheRead() ([]byte, bool) {
 	return nil, false
 }
 
+// cacheRead saves content to cache
 func (c *Collector) cacheStore(content []byte) {
 	switch c.cache.protocol {
 	case cacheProtocolFile:

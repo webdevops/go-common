@@ -58,6 +58,7 @@ type CollectorData struct {
 
 	Created *time.Time `json:"created"`
 	Expiry  *time.Time `json:"expiry"`
+	Tag     *string    `json:"tag"`
 }
 
 // NewCollectorData creates new collector data struct

@@ -260,7 +260,7 @@ func (c *Collector) runCacheRestore() (result bool) {
 	// start collection
 	c.collectionStart()
 
-	result = true
+	result = false
 	if c.collectionRestoreCache() {
 		// metrics restored from cache, do not collect them but try to restore them
 		func() {
@@ -289,6 +289,7 @@ func (c *Collector) runCacheRestore() (result bool) {
 
 			// try to restore metrics from cache
 			c.collectRun(false)
+			result = true
 		}()
 	}
 

@@ -224,6 +224,11 @@ func (c *Collector) Start() error {
 		// scrape time execution
 		go func() {
 			if c.cache != nil && c.runCacheRestore() {
+				c.logger.With(
+					zap.Float64("duration", c.lastScrapeDuration.Seconds()),
+					zap.Time("nextRun", c.nextScrapeTime.UTC()),
+				).Infof("finished cache restore, next run in %s", c.sleepTime.String())
+
 				// wait until next run
 				time.Sleep(*c.sleepTime)
 			} else {
@@ -278,13 +283,6 @@ func (c *Collector) runCacheRestore() (result bool) {
 
 				// finish run and calculate next run
 				c.collectionFinish()
-
-				if result {
-					c.logger.With(
-						zap.Float64("duration", c.lastScrapeDuration.Seconds()),
-						zap.Time("nextRun", c.nextScrapeTime.UTC()),
-					).Infof("finished cache restore, next run in %s", c.sleepTime.String())
-				}
 			}()
 
 			// try to restore metrics from cache

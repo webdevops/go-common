@@ -39,8 +39,8 @@ const (
 )
 
 // BuildCacheTag builds a cache tag based on prefix string and various interfaces, returns a tag value (string)
-func BuildCacheTag(prefix string, val ...interface{}) (ret string) {
-	ret = prefix
+func BuildCacheTag(prefix string, val ...interface{}) *string {
+	ret := prefix
 
 	if len(val) > 0 {
 		tagPayload, err := json.Marshal(val)
@@ -53,7 +53,7 @@ func BuildCacheTag(prefix string, val ...interface{}) (ret string) {
 		ret += "." + base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 	}
 
-	return ret
+	return &ret
 }
 
 // EnableCache alias of SetCache

@@ -131,13 +131,13 @@ func (c *Collector) GetPanicThreshold() int64 {
 	return c.panic.threshold
 }
 
-// SetPanicBackoffDurations set backoff duration for panics
-func (c *Collector) SetPanicBackoffDurations(val ...time.Duration) {
+// SetPanicBackoff set backoff duration for panics
+func (c *Collector) SetPanicBackoff(val ...time.Duration) {
 	c.panic.backoff = val
 }
 
-// GetPanicBackoffDurations returns panic backoff durations
-func (c *Collector) GetPanicBackoffDurations() []time.Duration {
+// GetPanicBackoff returns panic backoff durations
+func (c *Collector) GetPanicBackoff() []time.Duration {
 	return c.panic.backoff
 }
 

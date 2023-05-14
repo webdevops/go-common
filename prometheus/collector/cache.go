@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,6 +37,24 @@ const (
 	cacheProtocolFile   = "file"
 	cacheProtocolAzBlob = "azblob"
 )
+
+// BuildCacheTag builds a cache tag based on prefix string and various interfaces, returns a tag value (string)
+func BuildCacheTag(prefix string, val ...interface{}) (ret string) {
+	ret = prefix
+
+	if len(val) > 0 {
+		tagPayload, err := json.Marshal(val)
+		if err != nil {
+			panic(err)
+		}
+
+		hasher := sha256.New()
+		hasher.Write(tagPayload)
+		ret += "." + base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	}
+
+	return ret
+}
 
 // EnableCache alias of SetCache
 func (c *Collector) EnableCache(cache string, cacheTag *string) {

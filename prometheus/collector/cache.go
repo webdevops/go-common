@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"bytes"
+	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -13,9 +16,13 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-
-	armclient "github.com/webdevops/go-common/azuresdk/armclient"
+	"github.com/webdevops/go-common/azuresdk/armclient"
 	"github.com/webdevops/go-common/utils/to"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1apply "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 )
 
 type (
@@ -34,8 +41,9 @@ type (
 )
 
 const (
-	cacheProtocolFile   = "file"
-	cacheProtocolAzBlob = "azblob"
+	cacheProtocolFile         = "file"
+	cacheProtocolAzBlob       = "azblob"
+	cacheProtocolK8sConfigMap = "k8scm"
 )
 
 // BuildCacheTag builds a cache tag based on prefix string and various interfaces, returns a tag value (string)
@@ -89,19 +97,19 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		c.cache.protocol = cacheProtocolAzBlob
 		parsedUrl, err := url.Parse(rawSpec)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 		c.cache.url = parsedUrl
 
 		azureClient, err := armclient.NewArmClientFromEnvironment(c.logger)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		storageAccount := fmt.Sprintf(`https://%v/`, c.cache.url.Hostname())
 		pathParts := strings.SplitN(c.cache.url.Path, "/", 2)
 		if len(pathParts) < 2 {
-			c.logger.Panicf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
+			c.logger.Fatalf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
 		}
 
 		c.cache.spec["azblob:container"] = pathParts[0]
@@ -111,11 +119,41 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		azblobOpts := azblob.ClientOptions{ClientOptions: *azureClient.NewAzCoreClientOptions()}
 		client, err := azblob.NewClient(storageAccount, azureClient.GetCred(), &azblobOpts)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		c.cache.client = client
 
+	case strings.HasPrefix(rawSpec, `k8scm://`):
+		c.cache.protocol = cacheProtocolK8sConfigMap
+		parsedUrl, err := url.Parse(rawSpec)
+		if err != nil {
+			c.logger.Fatal(err)
+		}
+		c.cache.url = parsedUrl
+		pathParts := strings.SplitN(parsedUrl.Path, "/", 3)
+		if len(pathParts) < 3 {
+			c.logger.Fatalf(`azblob path needs to be specified as k8scm://namespace/name, got: %v`, rawSpec)
+		}
+
+		c.cache.spec["kubernetes:namespace"] = c.cache.url.Hostname()
+		// pathParts[0] is always empty, since the .Path begins with an /
+		c.cache.spec["kubernetes:configmap"] = pathParts[1]
+		// Slashes are not allowed as key
+		c.cache.spec["kubernetes:configmapKey"] = strings.ReplaceAll(pathParts[2], "/", "-")
+
+		// creates the in-cluster config
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			c.logger.Fatal(err)
+		}
+		// creates the client
+		client, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			c.logger.Fatal(err.Error())
+		}
+
+		c.cache.client = client.CoreV1()
 	default:
 		c.cache.protocol = cacheProtocolFile
 		c.cache.spec["file:path"] = rawSpec
@@ -223,6 +261,20 @@ func (c *Collector) cacheRead() ([]byte, bool) {
 				return content, true
 			}
 		}
+	case cacheProtocolK8sConfigMap:
+		configMap, err := c.cache.client.(*corev1.CoreV1Client).ConfigMaps(c.cache.spec["kubernetes:namespace"]).Get(context.TODO(), c.cache.spec["kubernetes:configmap"], metav1.GetOptions{})
+
+		if err == nil {
+			if response, ok := configMap.BinaryData[c.cache.spec["kubernetes:configmapKey"]]; ok {
+				r, err := gzip.NewReader(base64.NewDecoder(base64.StdEncoding, bytes.NewReader(response)))
+				if err == nil {
+					content, err := io.ReadAll(r)
+					if err == nil {
+						return content, true
+					}
+				}
+			}
+		}
 	}
 
 	return nil, false
@@ -240,7 +292,7 @@ func (c *Collector) cacheStore(content []byte) {
 		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 			err := os.Mkdir(dirPath, 0700)
 			if err != nil {
-				c.logger.Panic(err)
+				c.logger.Fatal(err)
 			}
 		}
 
@@ -256,18 +308,48 @@ func (c *Collector) cacheStore(content []byte) {
 		// write to temp file first
 		err := os.WriteFile(tmpFilePath, content, 0600) // #nosec inside container
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		// rename file to final cache file (atomic operation)
 		err = os.Rename(tmpFilePath, filePath)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 	case cacheProtocolAzBlob:
 		_, err := c.cache.client.(*azblob.Client).UploadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], content, nil)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
+		}
+	case cacheProtocolK8sConfigMap:
+		// Since the kubernetes configmap can only hold 1MB of data in total, we compress the data before store them
+		var buf64 bytes.Buffer
+		wb64 := base64.NewEncoder(base64.StdEncoding, &buf64)
+		wgz := gzip.NewWriter(wb64)
+		if _, err := wgz.Write(content); err != nil {
+			c.logger.Fatal(err)
+		}
+		if err := wgz.Close(); err != nil {
+			c.logger.Fatal(err)
+		}
+		if err := wb64.Close(); err != nil {
+			c.logger.Fatal(err)
+		}
+
+		configMap := corev1apply.ConfigMap(c.cache.spec["kubernetes:configmap"], c.cache.spec["kubernetes:namespace"])
+		configMap.WithBinaryData(map[string][]byte{c.cache.spec["kubernetes:configmapKey"]: buf64.Bytes()})
+
+		_, err := c.cache.client.(*corev1.CoreV1Client).ConfigMaps(c.cache.spec["kubernetes:namespace"]).Apply(
+			context.TODO(),
+			configMap,
+			metav1.ApplyOptions{
+				Force:        false,
+				FieldManager: "webdevops/common/" + c.cache.spec["kubernetes:configmapKey"],
+			},
+		)
+
+		if err != nil {
+			c.logger.Fatalf("Unable to update kubernetes configmap: %v", err)
 		}
 	}
 }

@@ -86,7 +86,7 @@ func (c *MsGraphClient) ServiceClient() *msgraphsdk.GraphServiceClient {
 
 		client, err := msgraphsdk.NewGraphServiceClientWithCredentialsAndHosts(c.getCred(), scopes, nil)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		// set endpoint from cloudconfig
@@ -107,12 +107,12 @@ func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
 	if c.adapter == nil {
 		auth, err := a.NewAzureIdentityAuthenticationProvider(c.getCred())
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 
 		// set endpoint from cloudconfig
@@ -133,7 +133,7 @@ func (c *MsGraphClient) getCred() azcore.TokenCredential {
 	if c.cred == nil {
 		cred, err := azidentity.NewAzDefaultCredential(c.NewAzCoreClientOptions())
 		if err != nil {
-			c.logger.Panic(err)
+			c.logger.Fatal(err)
 		}
 		c.cred = &cred
 	}

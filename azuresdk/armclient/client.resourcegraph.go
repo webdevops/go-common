@@ -70,14 +70,16 @@ func (azureClient *ArmClient) ExecuteResourceGraphQuery(ctx context.Context, sub
 }
 
 // ListResourceIdsWithKustoFilter return list of Azure ResourceIDs using ResourceGraph query
-func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context, subscriptions []string, filter string) (map[string]string, error) {
+func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context, subscriptions []string, filter []string) (map[string]string, error) {
 	list := map[string]string{}
 
 	query := "resources \n"
-	if len(filter) >= 1 {
-		filter = strings.TrimSpace(filter)
-		filter = strings.TrimLeft(filter, "|")
-		query += fmt.Sprintf("| %s \n", filter)
+	for _, val := range filter {
+		val = strings.TrimSpace(val)
+		val = strings.TrimLeft(val, "|")
+		if len(val) >= 1 {
+			query += fmt.Sprintf("| %s \n", filter)
+		}
 	}
 	query += "| project id"
 

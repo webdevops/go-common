@@ -78,7 +78,7 @@ func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context
 		val = strings.TrimSpace(val)
 		val = strings.TrimLeft(val, "|")
 		if len(val) >= 1 {
-			query += fmt.Sprintf("| %s \n", filter)
+			query += fmt.Sprintf("| %s \n", val)
 		}
 	}
 	query += "| project id"

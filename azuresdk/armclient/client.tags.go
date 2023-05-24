@@ -73,8 +73,21 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 
 	ret := make([]ResourceTagResult, len(config.Tags))
 
-	resourceID = strings.ToLower(resourceID)
+	// prefill tag config, this should not be empty in case of error
+	i := -1
+	for _, tagConfig := range config.Tags {
+		i++
 
+		// default
+		ret[i] = ResourceTagResult{
+			TagName:    tagConfig.Name,
+			TagValue:   "",
+			TargetName: tagConfig.TargetName,
+		}
+	}
+
+	// parse resource id
+	resourceID = strings.ToLower(resourceID)
 	resourceInfo, err := ParseResourceId(resourceID)
 	if err != nil {
 		return ret, err
@@ -150,7 +163,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 		return tagValue, nil
 	}
 
-	i := -1
+	i = -1
 	for _, tagConfig := range config.Tags {
 		i++
 
@@ -383,7 +396,6 @@ func (c *ResourceTagManager) AddResourceTagsToPrometheusLabels(ctx context.Conte
 	resourceTags, err := c.client.TagManager.GetResourceTag(ctx, resourceID, c)
 	if err != nil {
 		c.client.TagManager.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
-		return labels
 	}
 
 	for _, tag := range resourceTags {

@@ -73,19 +73,6 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 
 	ret := make([]ResourceTagResult, len(config.Tags))
 
-	// prefill tag config, this should not be empty in case of error
-	i := -1
-	for _, tagConfig := range config.Tags {
-		i++
-
-		// default
-		ret[i] = ResourceTagResult{
-			TagName:    tagConfig.Name,
-			TagValue:   "",
-			TargetName: tagConfig.TargetName,
-		}
-	}
-
 	// parse resource id
 	resourceID = strings.ToLower(resourceID)
 	resourceInfo, err := ParseResourceId(resourceID)
@@ -163,7 +150,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 		return tagValue, nil
 	}
 
-	i = -1
+	i := -1
 	for _, tagConfig := range config.Tags {
 		i++
 
@@ -393,13 +380,21 @@ func (c *ResourceTagManager) AddToPrometheusLabels(labels []string) []string {
 
 // AddResourceTagsToPrometheusLabels adds resource tags to prometheus labels
 func (c *ResourceTagManager) AddResourceTagsToPrometheusLabels(ctx context.Context, labels prometheus.Labels, resourceID string) prometheus.Labels {
-	resourceTags, err := c.client.TagManager.GetResourceTag(ctx, resourceID, c)
-	if err != nil {
-		c.client.TagManager.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
+	// init label value, do not miss a label or we run into problems later
+	for _, tag := range c.Tags {
+		labels[tag.TargetName] = ""
 	}
 
-	for _, tag := range resourceTags {
-		labels[tag.TargetName] = tag.TagValue
+	// only run processing if we have a resourceID
+	if resourceID != "" {
+		resourceTags, err := c.client.TagManager.GetResourceTag(ctx, resourceID, c)
+		if err != nil {
+			c.client.TagManager.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
+		}
+
+		for _, tag := range resourceTags {
+			labels[tag.TargetName] = tag.TagValue
+		}
 	}
 
 	return labels

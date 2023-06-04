@@ -76,16 +76,19 @@ Example configuration:
 }
 ```
 
-### Tag handling
+## Tag manager
 
 Tag can be dynamically added to metrics and processed though filters
 
-format is: `tagname?filter1` or `tagname?filter1&filter2`
+format is: `tagname?option1` or `tagname?option1&option2`
 
-| Tag filter | Description                 |
-|------------|-----------------------------|
-| `toLower`  | Lowercasing Azure tag value |
-| `toUpper`  | Uppercasing Azure tag value |
+| Tag option | Description                                                                                                     |
+|------------|-----------------------------------------------------------------------------------------------------------------|
+| `name`     | Name of target label                                                                                            |
+| `toLower`  | Lowercasing Azure tag value                                                                                     |
+| `toUpper`  | Uppercasing Azure tag value                                                                                     |
+| `inherit`  | If tag is not set, try to fetch from parent structure (Resource -> ResourceGroup -> Subscription)               |
+| `source`   | Defines where the tag value should be fetched from, allowed values: `resource`, `resourceGroup`, `subscription` |
 
 ## AzureTracing metrics
 

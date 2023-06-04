@@ -16,13 +16,14 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/webdevops/go-common/azuresdk/armclient"
-	"github.com/webdevops/go-common/utils/to"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1apply "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+
+	"github.com/webdevops/go-common/azuresdk/armclient"
+	"github.com/webdevops/go-common/utils/to"
 )
 
 type (
@@ -107,13 +108,13 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		}
 
 		storageAccount := fmt.Sprintf(`https://%v/`, c.cache.url.Hostname())
-		pathParts := strings.SplitN(c.cache.url.Path, "/", 2)
+		pathParts := strings.Split(c.cache.url.Path, "/")
 		if len(pathParts) < 2 {
 			c.logger.Fatalf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
 		}
 
 		c.cache.spec["azblob:container"] = pathParts[0]
-		c.cache.spec["azblob:blob"] = pathParts[1]
+		c.cache.spec["azblob:blob"] = strings.Join(pathParts[1:], "/")
 
 		// create a client for the specified storage account
 		azblobOpts := azblob.ClientOptions{ClientOptions: *azureClient.NewAzCoreClientOptions()}

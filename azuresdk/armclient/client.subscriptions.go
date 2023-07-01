@@ -2,6 +2,7 @@ package armclient
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
@@ -92,4 +93,33 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 	azureClient.cache.SetDefault(CacheIdentifierSubscriptions, list)
 
 	return list, nil
+}
+
+// GetCachedSubscription returns a cached subscription
+func (azureClient *ArmClient) GetCachedSubscription(ctx context.Context, subscriptionID string) (*armsubscriptions.Subscription, error) {
+	list, err := azureClient.ListCachedSubscriptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if subscription, exists := list[subscriptionID]; exists {
+		return subscription, nil
+	}
+
+	return nil, fmt.Errorf(`no subscription with id "%s" found`, subscriptionID)
+}
+
+// GetSubscription returns a subscription
+func (azureClient *ArmClient) GetSubscription(ctx context.Context, subscriptionID string) (*armsubscriptions.Subscription, error) {
+	client, err := armsubscriptions.NewClient(azureClient.GetCred(), azureClient.NewArmClientOptions())
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := client.Get(ctx, subscriptionID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result.Subscription, nil
 }

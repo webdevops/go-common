@@ -75,9 +75,9 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 		}
 
 		for _, subscription := range result.Value {
-			if len(azureClient.subscriptionFilter) > 0 {
+			if len(azureClient.subscriptionList) > 0 {
 				// use subscription filter
-				for _, subscriptionId := range azureClient.subscriptionFilter {
+				for _, subscriptionId := range azureClient.subscriptionList {
 					if strings.EqualFold(*subscription.SubscriptionID, subscriptionId) {
 						list[*subscription.SubscriptionID] = subscription
 						break

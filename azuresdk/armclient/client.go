@@ -19,6 +19,10 @@ import (
 	"github.com/webdevops/go-common/utils/to"
 )
 
+const (
+	EnvVarServiceDiscoveryTtl = "AZURE_SERVICEDISCOVERY_CACHE_TTL"
+)
+
 type (
 	ArmClient struct {
 		TagManager *ArmClientTagManager
@@ -30,7 +34,7 @@ type (
 		cache    *cache.Cache
 		cacheTtl time.Duration
 
-		subscriptionFilter []string
+		subscriptionList []string
 
 		cred *azcore.TokenCredential
 
@@ -54,9 +58,6 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredL
 	client := &ArmClient{}
 	client.cloud = cloudConfig
 
-	client.cacheTtl = 30 * time.Minute
-	client.cache = cache.New(60*time.Minute, 60*time.Second)
-
 	client.logger = logger
 	client.userAgent = "go-common/unknown"
 
@@ -64,6 +65,16 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredL
 		client: client,
 		logger: logger.With(zap.String("component", "armClientTagManager")),
 	}
+
+	cacheTtl := 60 * time.Minute
+	if val := os.Getenv(EnvVarServiceDiscoveryTtl); val != "" {
+		if ttl, err := time.ParseDuration(val); err == nil {
+			cacheTtl = ttl
+		} else {
+			logger.Fatalf(`%s is not a valid value, got "%v", expected duration`, EnvVarServiceDiscoveryTtl, val)
+		}
+	}
+	client.SetCacheTtl(cacheTtl)
 
 	return client
 }
@@ -193,11 +204,19 @@ func (azureClient *ArmClient) SetUserAgent(useragent string) {
 // SetCacheTtl set TTL for service discovery cache
 func (azureClient *ArmClient) SetCacheTtl(ttl time.Duration) {
 	azureClient.cacheTtl = ttl
+	azureClient.cache = cache.New(ttl, 60*time.Second)
 }
 
 // SetSubscriptionFilter set subscription filter, other subscriptions will be ignored
+//
+// Deprecated: use SetSubscriptionID instead
 func (azureClient *ArmClient) SetSubscriptionFilter(subscriptionId ...string) {
-	azureClient.subscriptionFilter = subscriptionId
+	azureClient.SetSubscriptionID(subscriptionId...)
+}
+
+// SetSubscriptionID set subscription filter, other subscriptions will be ignored
+func (azureClient *ArmClient) SetSubscriptionID(subscriptionId ...string) {
+	azureClient.subscriptionList = subscriptionId
 }
 
 func (azureClient *ArmClient) cacheData(identifier string, callback func() (interface{}, error)) (interface{}, error) {

@@ -106,6 +106,9 @@ func (azureClient *ArmClient) initServiceDiscovery() {
 	// use fixed list of subscription ids
 	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionId); val != "" {
 		azureClient.serviceDiscovery.subscriptionIds = []string{}
+		// replace spaces with commas,
+		// we should be able to use both for easier usage in yaml files
+		val = strings.ReplaceAll(val, " ", ",")
 		for _, subscriptionId := range strings.Split(val, ",") {
 			subscriptionId = strings.TrimSpace(subscriptionId)
 			if subscriptionId != "" {

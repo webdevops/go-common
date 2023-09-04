@@ -22,6 +22,7 @@ import (
 
 const (
 	EnvVarServiceDiscoveryTtl                     = "AZURE_SERVICEDISCOVERY_CACHE_TTL"
+	EnvVarServiceDiscoverySubscriptionId          = "AZURE_SERVICEDISCOVERY_SUBSCRIPTION_ID"
 	EnvVarServiceDiscoverySubscriptionTagSelector = "AZURE_SERVICEDISCOVERY_SUBSCRIPTION_TAG_SELECTOR"
 )
 
@@ -102,7 +103,19 @@ func (azureClient *ArmClient) initCache() {
 
 // init serviceDiscovery settings
 func (azureClient *ArmClient) initServiceDiscovery() {
-	// parse tag selector (using kubernetes label selector)
+	// use fixed list of subscription ids
+	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionId); val != "" {
+		azureClient.serviceDiscovery.subscriptionIds = []string{}
+		for _, subscriptionId := range strings.Split(val, ",") {
+			subscriptionId = strings.TrimSpace(subscriptionId)
+			azureClient.serviceDiscovery.subscriptionIds = append(
+				azureClient.serviceDiscovery.subscriptionIds,
+				subscriptionId,
+			)
+		}
+	}
+
+	// parse subscription tag selector (using kubernetes label selector)
 	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionTagSelector); val != "" {
 		selector, err := labels.Parse(val)
 		if err != nil {
@@ -240,6 +253,14 @@ func (azureClient *ArmClient) SetSubscriptionFilter(subscriptionId ...string) {
 // SetSubscriptionID set subscription filter, other subscriptions will be ignored
 func (azureClient *ArmClient) SetSubscriptionID(subscriptionId ...string) {
 	azureClient.serviceDiscovery.subscriptionIds = subscriptionId
+}
+
+// AddSubscriptionID add subscription filter, other subscriptions will be ignored
+func (azureClient *ArmClient) AddSubscriptionID(subscriptionId ...string) {
+	azureClient.serviceDiscovery.subscriptionIds = append(
+		azureClient.serviceDiscovery.subscriptionIds,
+		subscriptionId...,
+	)
 }
 
 func (azureClient *ArmClient) cacheData(identifier string, callback func() (interface{}, error)) (interface{}, error) {

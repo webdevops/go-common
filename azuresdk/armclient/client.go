@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	EnvVarServiceDiscoveryTtl = "AZURE_SERVICEDISCOVERY_CACHE_TTL"
+	EnvVarServiceDiscoveryTtl                     = "AZURE_SERVICEDISCOVERY_CACHE_TTL"
+	EnvVarServiceDiscoverySubscriptionTagSelector = "AZURE_SERVICEDISCOVERY_SUBSCRIPTION_TAG_SELECTOR"
 )
 
 type (

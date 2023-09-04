@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	cache "github.com/patrickmn/go-cache"
 	zap "go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/labels"
 
 	commonAzidentity "github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
@@ -35,7 +36,10 @@ type (
 		cache    *cache.Cache
 		cacheTtl time.Duration
 
-		subscriptionList []string
+		serviceDiscovery struct {
+			subscriptionIds         []string
+			subscriptionTagSelector *labels.Selector
+		}
 
 		cred *azcore.TokenCredential
 
@@ -67,15 +71,8 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredL
 		logger: logger.With(zap.String("component", "armClientTagManager")),
 	}
 
-	cacheTtl := 60 * time.Minute
-	if val := os.Getenv(EnvVarServiceDiscoveryTtl); val != "" {
-		if ttl, err := time.ParseDuration(val); err == nil {
-			cacheTtl = ttl
-		} else {
-			logger.Fatalf(`%s is not a valid value, got "%v", expected duration`, EnvVarServiceDiscoveryTtl, val)
-		}
-	}
-	client.SetCacheTtl(cacheTtl)
+	client.initCache()
+	client.initServiceDiscovery()
 
 	return client
 }
@@ -88,6 +85,31 @@ func NewArmClientWithCloudName(cloudName string, logger *zap.SugaredLogger) (*Ar
 	}
 
 	return NewArmClient(cloudConfig, logger), nil
+}
+
+// init cache
+func (azureClient *ArmClient) initCache() {
+	cacheTtl := 60 * time.Minute
+	if val := os.Getenv(EnvVarServiceDiscoveryTtl); val != "" {
+		if ttl, err := time.ParseDuration(val); err == nil {
+			cacheTtl = ttl
+		} else {
+			azureClient.logger.Fatalf(`%s is not a valid value, got "%v", expected duration`, EnvVarServiceDiscoveryTtl, val)
+		}
+	}
+	azureClient.SetCacheTtl(cacheTtl)
+}
+
+// init serviceDiscovery settings
+func (azureClient *ArmClient) initServiceDiscovery() {
+	// parse tag selector (using kubernetes label selector)
+	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionTagSelector); val != "" {
+		selector, err := labels.Parse(val)
+		if err != nil {
+			azureClient.logger.Panic(err)
+		}
+		azureClient.serviceDiscovery.subscriptionTagSelector = &selector
+	}
 }
 
 // Connect triggers and logs connect message
@@ -217,7 +239,7 @@ func (azureClient *ArmClient) SetSubscriptionFilter(subscriptionId ...string) {
 
 // SetSubscriptionID set subscription filter, other subscriptions will be ignored
 func (azureClient *ArmClient) SetSubscriptionID(subscriptionId ...string) {
-	azureClient.subscriptionList = subscriptionId
+	azureClient.serviceDiscovery.subscriptionIds = subscriptionId
 }
 
 func (azureClient *ArmClient) cacheData(identifier string, callback func() (interface{}, error)) (interface{}, error) {

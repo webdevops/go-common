@@ -3,7 +3,6 @@ package armclient
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
@@ -60,19 +59,7 @@ func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[
 
 // ListSubscriptions return list of Azure Subscriptions as map (key is subscription id)
 func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string]*armsubscriptions.Subscription, error) {
-	var (
-		subscriptionTagSelector *labels.Selector
-	)
 	list := map[string]*armsubscriptions.Subscription{}
-
-	// parse tag selector (using kubernetes label selector)
-	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionTagSelector); val != "" {
-		selector, err := labels.Parse(val)
-		if err != nil {
-			panic(err)
-		}
-		subscriptionTagSelector = &selector
-	}
 
 	client, err := armsubscriptions.NewClient(azureClient.GetCred(), azureClient.NewArmClientOptions())
 	if err != nil {
@@ -91,27 +78,25 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 		}
 
 		for _, subscription := range result.Value {
-			useSubscription := true
+			useSubscription := false
 
-			if len(azureClient.subscriptionList) > 0 {
-				// use subscription filter
+			// use subscription filter
+			if len(azureClient.serviceDiscovery.subscriptionIds) > 0 {
 				useSubscription = false
-				for _, subscriptionId := range azureClient.subscriptionList {
+				for _, subscriptionId := range azureClient.serviceDiscovery.subscriptionIds {
 					if strings.EqualFold(*subscription.SubscriptionID, subscriptionId) {
 						useSubscription = true
 						break
 					}
 				}
-			}
 
-			// filter by tag selector (using kubernetes label selector)
-			if subscriptionTagSelector != nil {
+				// filter by tag selector (using kubernetes label selector)
+			} else if azureClient.serviceDiscovery.subscriptionTagSelector != nil {
 				tags := labels.Set(to.StringMap(subscription.Tags))
-				if (*subscriptionTagSelector).Matches(tags) {
-					useSubscription = true
-				} else {
-					useSubscription = false
-				}
+				useSubscription = (*azureClient.serviceDiscovery.subscriptionTagSelector).Matches(tags)
+			} else {
+				// default: always use subscription
+				useSubscription = true
 			}
 
 			if useSubscription {

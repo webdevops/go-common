@@ -108,10 +108,12 @@ func (azureClient *ArmClient) initServiceDiscovery() {
 		azureClient.serviceDiscovery.subscriptionIds = []string{}
 		for _, subscriptionId := range strings.Split(val, ",") {
 			subscriptionId = strings.TrimSpace(subscriptionId)
-			azureClient.serviceDiscovery.subscriptionIds = append(
-				azureClient.serviceDiscovery.subscriptionIds,
-				subscriptionId,
-			)
+			if subscriptionId != "" {
+				azureClient.serviceDiscovery.subscriptionIds = append(
+					azureClient.serviceDiscovery.subscriptionIds,
+					subscriptionId,
+				)
+			}
 		}
 	}
 

@@ -158,26 +158,37 @@ func (c *MsGraphClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 	clientOptions := azcore.ClientOptions{
 		Cloud:            c.cloud.Configuration,
 		PerCallPolicies:  []policy.Policy{},
-		PerRetryPolicies: nil,
+		PerRetryPolicies: c.perRetryPolicies(),
+		Telemetry:        c.telemetryOptions(),
+	}
+	return &clientOptions
+}
+
+// perRetryPolicies generates all default retry policies
+func (c *MsGraphClient) perRetryPolicies() (policies []policy.Policy) {
+	// azure prometheus tracing
+	if tracing.TracingIsEnabled() {
+		policies = append(
+			policies,
+			tracing.NewTracingPolicy(),
+		)
 	}
 
+	return
+}
+
+// telemetryOptions generates telemetry options
+func (c *MsGraphClient) telemetryOptions() policy.TelemetryOptions {
 	// add userAgent (max 24 chars)
 	userAgent := strings.TrimSpace(c.userAgent)
 	if len(userAgent) > 24 {
 		userAgent = userAgent[:24]
 	}
-	clientOptions.Telemetry.ApplicationID = userAgent
-	clientOptions.Telemetry.Disabled = false
 
-	// azure prometheus tracing
-	if tracing.TracingIsEnabled() {
-		clientOptions.PerRetryPolicies = append(
-			clientOptions.PerRetryPolicies,
-			tracing.NewTracingPolicy(),
-		)
+	return policy.TelemetryOptions{
+		ApplicationID: userAgent,
+		Disabled:      false,
 	}
-
-	return &clientOptions
 }
 
 // SetUserAgent set user agent for all API calls

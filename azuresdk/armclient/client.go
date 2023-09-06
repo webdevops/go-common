@@ -195,23 +195,8 @@ func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 	clientOptions := azcore.ClientOptions{
 		Cloud:            azureClient.cloud.Configuration,
 		PerCallPolicies:  []policy.Policy{},
-		PerRetryPolicies: nil,
-	}
-
-	// add userAgent (max 24 chars)
-	userAgent := strings.TrimSpace(azureClient.userAgent)
-	if len(userAgent) > 24 {
-		userAgent = userAgent[:24]
-	}
-	clientOptions.Telemetry.ApplicationID = userAgent
-	clientOptions.Telemetry.Disabled = false
-
-	// azure prometheus tracing
-	if tracing.TracingIsEnabled() {
-		clientOptions.PerRetryPolicies = append(
-			clientOptions.PerRetryPolicies,
-			tracing.NewTracingPolicy(),
-		)
+		PerRetryPolicies: azureClient.perRetryPolicies(),
+		Telemetry:        azureClient.telemetryOptions(),
 	}
 
 	return &clientOptions
@@ -221,19 +206,40 @@ func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 func (azureClient *ArmClient) NewArmClientOptions() *arm.ClientOptions {
 	clientOptions := arm.ClientOptions{
 		ClientOptions: policy.ClientOptions{
-			Cloud: azureClient.cloud.Configuration,
+			Cloud:            azureClient.cloud.Configuration,
+			Telemetry:        azureClient.telemetryOptions(),
+			PerRetryPolicies: azureClient.perRetryPolicies(),
 		},
 	}
 
+	return &clientOptions
+}
+
+// perRetryPolicies generates all default retry policies
+func (azureClient *ArmClient) perRetryPolicies() (policies []policy.Policy) {
 	// azure prometheus tracing
 	if tracing.TracingIsEnabled() {
-		clientOptions.PerRetryPolicies = append(
-			clientOptions.PerRetryPolicies,
+		policies = append(
+			policies,
 			tracing.NewTracingPolicy(),
 		)
 	}
 
-	return &clientOptions
+	return
+}
+
+// telemetryOptions generates telemetry options
+func (azureClient *ArmClient) telemetryOptions() policy.TelemetryOptions {
+	// add userAgent (max 24 chars)
+	userAgent := strings.TrimSpace(azureClient.userAgent)
+	if len(userAgent) > 24 {
+		userAgent = userAgent[:24]
+	}
+
+	return policy.TelemetryOptions{
+		ApplicationID: userAgent,
+		Disabled:      false,
+	}
 }
 
 // UseAzCliAuth use (force) az cli authentication

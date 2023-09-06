@@ -179,14 +179,8 @@ func (c *MsGraphClient) perRetryPolicies() (policies []policy.Policy) {
 
 // telemetryOptions generates telemetry options
 func (c *MsGraphClient) telemetryOptions() policy.TelemetryOptions {
-	// add userAgent (max 24 chars)
-	userAgent := strings.TrimSpace(c.userAgent)
-	if len(userAgent) > 24 {
-		userAgent = userAgent[:24]
-	}
-
 	return policy.TelemetryOptions{
-		ApplicationID: userAgent,
+		ApplicationID: strings.TrimSpace(c.userAgent),
 		Disabled:      false,
 	}
 }

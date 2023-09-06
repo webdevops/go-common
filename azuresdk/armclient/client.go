@@ -198,6 +198,14 @@ func (azureClient *ArmClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 		PerRetryPolicies: nil,
 	}
 
+	// add userAgent (max 24 chars)
+	userAgent := strings.TrimSpace(azureClient.userAgent)
+	if len(userAgent) > 24 {
+		userAgent = userAgent[:24]
+	}
+	clientOptions.Telemetry.ApplicationID = userAgent
+	clientOptions.Telemetry.Disabled = false
+
 	// azure prometheus tracing
 	if tracing.TracingIsEnabled() {
 		clientOptions.PerRetryPolicies = append(

@@ -2,6 +2,7 @@ package msgraphclient
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -159,6 +160,14 @@ func (c *MsGraphClient) NewAzCoreClientOptions() *azcore.ClientOptions {
 		PerCallPolicies:  []policy.Policy{},
 		PerRetryPolicies: nil,
 	}
+
+	// add userAgent (max 24 chars)
+	userAgent := strings.TrimSpace(c.userAgent)
+	if len(userAgent) > 24 {
+		userAgent = userAgent[:24]
+	}
+	clientOptions.Telemetry.ApplicationID = userAgent
+	clientOptions.Telemetry.Disabled = false
 
 	// azure prometheus tracing
 	if tracing.TracingIsEnabled() {

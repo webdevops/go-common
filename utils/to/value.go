@@ -19,8 +19,12 @@ func ValuePtr[N PointerInterface](val N) *N {
 }
 
 // Val return the value from a pointer
-func Val[N PointerInterface](val N) *N {
-	return &val
+func Val[N PointerInterface](val *N) N {
+	if val != nil {
+		return *val
+	}
+	var def N
+	return def
 }
 
 // Ptr return the pointer from value

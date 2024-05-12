@@ -53,7 +53,12 @@ func NewArmClientFromEnvironment(logger *zap.SugaredLogger) (*ArmClient, error) 
 	var azureEnvironment string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
-		logger.Panic(`env var AZURE_ENVIRONMENT is not set`)
+		logger.Info(`env var AZURE_ENVIRONMENT is not set, assuming "AzurePublicCloud"`)
+		azureEnvironment = string(cloudconfig.AzurePublicCloud)
+
+		if err := os.Setenv("AZURE_ENVIRONMENT", azureEnvironment); err != nil {
+			logger.Panic(`unable to set AZURE_ENVIRONMENT`)
+		}
 	}
 
 	return NewArmClientWithCloudName(azureEnvironment, logger)

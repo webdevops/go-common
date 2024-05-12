@@ -40,7 +40,12 @@ func NewMsGraphClientFromEnvironment(logger *zap.SugaredLogger) (*MsGraphClient,
 	var azureEnvironment, azureTenant string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
-		logger.Panic(`env var AZURE_ENVIRONMENT is not set`)
+		logger.Info(`env var AZURE_ENVIRONMENT is not set, assuming "AzurePublicCloud"`)
+		azureEnvironment = string(cloudconfig.AzurePublicCloud)
+
+		if err := os.Setenv("AZURE_ENVIRONMENT", azureEnvironment); err != nil {
+			logger.Panic(`unable to set AZURE_ENVIRONMENT`)
+		}
 	}
 
 	if azureTenant = os.Getenv("AZURE_TENANT_ID"); azureTenant == "" {

@@ -14,8 +14,15 @@ const (
 	ResourceGraphQueryOptionsTop = 1000
 )
 
+type (
+	ResourceGraphOptions struct {
+		Subscriptions    []string
+		ManagementGroups []string
+	}
+)
+
 // ExecuteResourceGraphQuery executes a ResourceGraph query and returns the full result
-func (azureClient *ArmClient) ExecuteResourceGraphQuery(ctx context.Context, subscriptions []string, query string) ([]map[string]interface{}, error) {
+func (azureClient *ArmClient) ExecuteResourceGraphQuery(ctx context.Context, query string, options ResourceGraphOptions) ([]map[string]interface{}, error) {
 	list := []map[string]interface{}{}
 
 	resourceGraphClient, err := armresourcegraph.NewClient(azureClient.GetCred(), azureClient.NewArmClientOptions())
@@ -34,14 +41,21 @@ func (azureClient *ArmClient) ExecuteResourceGraphQuery(ctx context.Context, sub
 		Skip:         &requestQuerySkip,
 	}
 
-	for {
-		// Create the query request
-		request := armresourcegraph.QueryRequest{
-			Subscriptions: to.SlicePtr(subscriptions),
-			Query:         &query,
-			Options:       &requestOptions,
-		}
+	// Create the query request
+	request := armresourcegraph.QueryRequest{
+		Query:   &query,
+		Options: &requestOptions,
+	}
 
+	if len(options.Subscriptions) >= 1 {
+		request.Subscriptions = to.SlicePtr(options.Subscriptions)
+	}
+
+	if len(options.ManagementGroups) >= 1 {
+		request.ManagementGroups = to.SlicePtr(options.ManagementGroups)
+	}
+
+	for {
 		var result, queryErr = resourceGraphClient.Resources(ctx, request, nil)
 		if queryErr != nil {
 			return list, queryErr
@@ -70,7 +84,7 @@ func (azureClient *ArmClient) ExecuteResourceGraphQuery(ctx context.Context, sub
 }
 
 // ListResourceIdsWithKustoFilter return list of Azure ResourceIDs using ResourceGraph query
-func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context, subscriptions []string, filter []string) (map[string]string, error) {
+func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context, filter []string, options ResourceGraphOptions) (map[string]string, error) {
 	list := map[string]string{}
 
 	query := "resources \n"
@@ -83,7 +97,7 @@ func (azureClient *ArmClient) ListResourceIdsWithKustoFilter(ctx context.Context
 	}
 	query += "| project id"
 
-	result, err := azureClient.ExecuteResourceGraphQuery(ctx, subscriptions, query)
+	result, err := azureClient.ExecuteResourceGraphQuery(ctx, query, options)
 	if err != nil {
 		return list, err
 	}

@@ -13,6 +13,7 @@ import (
 type (
 	DirectoryObject struct {
 		// general
+		OdataType   string
 		Type        string
 		DisplayName string
 		ObjectID    string
@@ -73,6 +74,7 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 		for _, row := range result.GetValue() {
 			objectInfo := &DirectoryObject{
 				ObjectID: to.String(row.GetId()),
+				OdataType: to.String(row.GetOdataType())
 				Type:     "unknown",
 			}
 

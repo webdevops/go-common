@@ -12,12 +12,21 @@ import (
 
 type (
 	DirectoryObject struct {
-		Type                 string
-		ServicePrincipalType string
-		ManagedIdentity      string
-		DisplayName          string
-		ObjectID             string
-		ApplicationID        string
+		// general
+		Type        string
+		DisplayName string
+		ObjectID    string
+
+		// user
+		UserPrincipalName *string
+		Email             *string
+
+		// servicePrincipal/application
+		ServicePrincipalType *string
+		ManagedIdentity      *string
+		ApplicationID        *string
+
+		// group
 	}
 )
 
@@ -70,23 +79,25 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 			if user, ok := row.(models.Userable); ok {
 				objectInfo.Type = "user"
 				objectInfo.DisplayName = to.String(user.GetDisplayName())
+				objectInfo.UserPrincipalName = user.GetUserPrincipalName()
+				objectInfo.Email = user.GetMail()
 			} else if group, ok := row.(models.Groupable); ok {
 				objectInfo.Type = "group"
 				objectInfo.DisplayName = to.String(group.GetDisplayName())
 			} else if app, ok := row.(models.Applicationable); ok {
 				objectInfo.Type = "application"
 				objectInfo.DisplayName = to.String(app.GetDisplayName())
-				objectInfo.ApplicationID = to.String(app.GetAppId())
+				objectInfo.ApplicationID = app.GetAppId()
 			} else if sp, ok := row.(models.ServicePrincipalable); ok {
 				objectInfo.Type = "serviceprincipal"
 				objectInfo.DisplayName = to.String(sp.GetDisplayName())
-				objectInfo.ApplicationID = to.String(sp.GetAppId())
-				objectInfo.ServicePrincipalType = to.String(sp.GetServicePrincipalType())
+				objectInfo.ApplicationID = sp.GetAppId()
+				objectInfo.ServicePrincipalType = sp.GetServicePrincipalType()
 
-				if strings.EqualFold(objectInfo.ServicePrincipalType, "ManagedIdentity") {
+				if strings.EqualFold(to.String(objectInfo.ServicePrincipalType), "ManagedIdentity") {
 					spAlternativeNames := sp.GetAlternativeNames()
 					if len(spAlternativeNames) >= 2 {
-						objectInfo.ManagedIdentity = spAlternativeNames[1]
+						objectInfo.ManagedIdentity = to.Ptr(spAlternativeNames[1])
 					}
 				}
 			}

@@ -73,9 +73,9 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		for _, row := range result.GetValue() {
 			objectInfo := &DirectoryObject{
-				ObjectID: to.String(row.GetId()),
-				OdataType: to.String(row.GetOdataType())
-				Type:     "unknown",
+				ObjectID:  to.String(row.GetId()),
+				OdataType: to.String(row.GetOdataType()),
+				Type:      "unknown",
 			}
 
 			if user, ok := row.(models.Userable); ok {

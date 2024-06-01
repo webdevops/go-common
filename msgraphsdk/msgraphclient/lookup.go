@@ -10,6 +10,14 @@ import (
 	"github.com/webdevops/go-common/utils/to"
 )
 
+const (
+	DirectoryObjectTypeUnknown          = "unknown"
+	DirectoryObjectTypeUser             = "user"
+	DirectoryObjectTypeGroup            = "group"
+	DirectoryObjectTypeApplication      = "application"
+	DirectoryObjectTypeServicePrincipal = "serviceprincipal"
+)
+
 type (
 	DirectoryObject struct {
 		// general
@@ -17,6 +25,8 @@ type (
 		Type        string
 		DisplayName string
 		ObjectID    string
+
+		DirectoryObject models.DirectoryObjectable
 
 		// user
 		UserPrincipalName *string
@@ -30,6 +40,26 @@ type (
 		// group
 	}
 )
+
+// IsUser returns true if object is a user
+func (obj *DirectoryObject) IsUser() bool {
+	return obj.Type == DirectoryObjectTypeUser
+}
+
+// IsGroup returns true if object is a group
+func (obj *DirectoryObject) IsGroup() bool {
+	return obj.Type == DirectoryObjectTypeGroup
+}
+
+// IsApplication returns true if object is an application
+func (obj *DirectoryObject) IsApplication() bool {
+	return obj.Type == DirectoryObjectTypeApplication
+}
+
+// IsServicePrincipal returns true if object is a servicePrincipal
+func (obj *DirectoryObject) IsServicePrincipal() bool {
+	return obj.Type == DirectoryObjectTypeServicePrincipal
+}
 
 // LookupPrincipalID returns information about AzureAD directory object by objectid
 func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...string) (map[string]*DirectoryObject, error) {
@@ -73,25 +103,26 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		for _, row := range result.GetValue() {
 			objectInfo := &DirectoryObject{
-				ObjectID:  to.String(row.GetId()),
-				OdataType: to.String(row.GetOdataType()),
-				Type:      "unknown",
+				ObjectID:        to.String(row.GetId()),
+				OdataType:       to.String(row.GetOdataType()),
+				Type:            DirectoryObjectTypeUnknown,
+				DirectoryObject: row,
 			}
 
 			if user, ok := row.(models.Userable); ok {
-				objectInfo.Type = "user"
+				objectInfo.Type = DirectoryObjectTypeUser
 				objectInfo.DisplayName = to.String(user.GetDisplayName())
 				objectInfo.UserPrincipalName = user.GetUserPrincipalName()
 				objectInfo.Email = user.GetMail()
 			} else if group, ok := row.(models.Groupable); ok {
-				objectInfo.Type = "group"
+				objectInfo.Type = DirectoryObjectTypeGroup
 				objectInfo.DisplayName = to.String(group.GetDisplayName())
 			} else if app, ok := row.(models.Applicationable); ok {
-				objectInfo.Type = "application"
+				objectInfo.Type = DirectoryObjectTypeApplication
 				objectInfo.DisplayName = to.String(app.GetDisplayName())
 				objectInfo.ApplicationID = app.GetAppId()
 			} else if sp, ok := row.(models.ServicePrincipalable); ok {
-				objectInfo.Type = "serviceprincipal"
+				objectInfo.Type = DirectoryObjectTypeServicePrincipal
 				objectInfo.DisplayName = to.String(sp.GetDisplayName())
 				objectInfo.ApplicationID = sp.GetAppId()
 				objectInfo.ServicePrincipalType = sp.GetServicePrincipalType()

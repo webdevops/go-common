@@ -93,7 +93,7 @@ func (c *MsGraphClient) LookupPrincipalID(ctx context.Context, princpalIds ...st
 
 		principalObjectIDChunkList := lookupPrincipalObjectIDList[i:end]
 
-		requestBody := directoryobjects.NewGetbyidsGetByIdsPostRequestBody()
+		requestBody := directoryobjects.NewGetByIdsPostRequestBody()
 		requestBody.SetIds(principalObjectIDChunkList)
 
 		result, err := c.ServiceClient().DirectoryObjects().GetByIds().PostAsGetByIdsPostResponse(ctx, requestBody, nil)

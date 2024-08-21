@@ -80,6 +80,11 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 		for _, subscription := range result.Value {
 			useSubscription := false
 
+			// skip subscription in delete/disabled state
+			if subscription.State != nil && *subscription.State == armsubscriptions.SubscriptionStateDisabled {
+				continue
+			}
+
 			// use subscription filter
 			if len(azureClient.serviceDiscovery.subscriptionIds) > 0 {
 				useSubscription = false

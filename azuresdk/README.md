@@ -49,13 +49,13 @@ Following environment variables needs to be set (automatically set via workloadi
 
 ### Azure Cloud/Environment support
 
-| `AZURE_ENVIRONMENT`                                               | Description                                                                                  |
-|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
-| `AzurePublicCloud`, `AzurePublic`, `AzureCloud`                   | Default Azure cloud, using https://portal.azure.com                                          |
-| `AzureChinaCloud`, `AzureChina`                                   | Azure cloud in China, using https://porta.azure.cn                                           |
-| `AzureGovernmentCloud`, `AzureGoverment`, `AzureUSGovermentCloud` | US Government Azure cloud                                                                    |
-| `AzureSecretCloud`, `AzureSecret`, `USSec`                        | Azure Secret Cloud region, needs additional configuration for endpoints                      |
-| `AzurePrivateCloud`, `AzurePrivate`                               | Private on-premise installation of Azure Cloud, needs additional configuration for endpoints |
+| `AZURE_ENVIRONMENT`                                                        | Description                                                                                  |
+|----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| `AzurePublicCloud`, `AzurePublic`, `AzureCloud`                            | Default Azure cloud, using https://portal.azure.com                                          |
+| `AzureChinaCloud`, `AzureChina`                                            | Azure cloud in China, using https://porta.azure.cn                                           |
+| `AzureGovernmentCloud`, `AzureGoverment`, `AzureUSGovermentCloud`, `USGov` | US Government Azure cloud                                                                    |
+| `AzureSecretCloud`, `AzureSecret`, `USSec`                                 | Azure Secret Cloud region, needs additional configuration for endpoints                      |
+| `AzurePrivateCloud`, `AzurePrivate`                                        | Private on-premise installation of Azure Cloud, needs additional configuration for endpoints |
 
 #### Azure Private cloud
 

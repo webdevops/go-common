@@ -53,7 +53,7 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 
 	// ----------------------------------------------------
 	// Azure Government cloud
-	case "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
+	case "usgov", "azuregovernment", "azuregovernmentcloud", "azureusgovernmentcloud":
 		config, err = CloudEnvironment{
 			Name:          AzureGovernmentCloud,
 			Configuration: cloud.AzureGovernment,

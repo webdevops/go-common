@@ -121,17 +121,17 @@ func getAzureCloudConfig() (cloud.Configuration, error) {
 		// cloud config via JSON file
 		data, err := os.ReadFile(val) // #nosec G304
 		if err != nil {
-			return cloudConfig, fmt.Errorf(`unable to parse json for USSec/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
+			return cloudConfig, fmt.Errorf(`unable to parse json for AzureSecretCloud/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 		}
 		cloudConfigJson = data
 	}
 
 	if len(cloudConfigJson) == 0 {
-		return cloudConfig, fmt.Errorf(`USSec/AzurePrivateCloud needs cloudconfig json passed via env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk`)
+		return cloudConfig, fmt.Errorf(`AzureSecretCloud/AzurePrivateCloud needs cloudconfig json passed via env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk`)
 	}
 
 	if err := json.Unmarshal([]byte(cloudConfigJson), &cloudConfig); err != nil {
-		return cloudConfig, fmt.Errorf(`unable to parse json for USSec/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
+		return cloudConfig, fmt.Errorf(`unable to parse json for AzureSecretCloud/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 	}
 
 	return cloudConfig, nil

@@ -68,16 +68,29 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 		})
 
 	// ----------------------------------------------------
+	// Azure Secret Cloud (endpoints not sharable, so expect custom configuration via json)
+	case "ussec", "azuresecret", "azurepsecretcloud":
+		config, err = CloudEnvironment{
+			Name: AzureSecretCloud,
+		}, nil
+
+		if cloudConfig, cloudConfigErr := getAzureCloudConfig(); cloudConfigErr == nil {
+			config.Configuration = cloudConfig
+		} else {
+			err = cloudConfigErr
+		}
+
+	// ----------------------------------------------------
 	// Azure Private Cloud (onpremise, custom configuration via json)
 	case "azureprivate", "azurepprivatecloud":
 		config, err = CloudEnvironment{
 			Name: AzurePrivateCloud,
 		}, nil
 
-		if cloudConfig, privateCloudConfigErr := createAzurePrivateCloudConfig(); privateCloudConfigErr == nil {
+		if cloudConfig, cloudConfigErr := getAzureCloudConfig(); cloudConfigErr == nil {
 			config.Configuration = cloudConfig
 		} else {
-			err = privateCloudConfigErr
+			err = cloudConfigErr
 		}
 
 	default:
@@ -96,8 +109,8 @@ func injectServiceConfig(config *cloud.Configuration, serviceName cloud.ServiceN
 	config.Services[serviceName] = serviceConfig
 }
 
-// createAzurePrivateCloudConfig creates azureprivate (onpremise) cloudconfig from either AZURE_CLOUD_CONFIG (string) or AZURE_CLOUD_CONFIG_FILE (file)
-func createAzurePrivateCloudConfig() (cloud.Configuration, error) {
+// getAzureCloudConfig creates azureprivate (onpremise) cloudconfig from either AZURE_CLOUD_CONFIG (string) or AZURE_CLOUD_CONFIG_FILE (file)
+func getAzureCloudConfig() (cloud.Configuration, error) {
 	var cloudConfigJson []byte
 	cloudConfig := cloud.Configuration{}
 
@@ -108,17 +121,17 @@ func createAzurePrivateCloudConfig() (cloud.Configuration, error) {
 		// cloud config via JSON file
 		data, err := os.ReadFile(val) // #nosec G304
 		if err != nil {
-			return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
+			return cloudConfig, fmt.Errorf(`unable to parse json for USSec/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 		}
 		cloudConfigJson = data
 	}
 
 	if len(cloudConfigJson) == 0 {
-		return cloudConfig, fmt.Errorf(`AzurePrivateCloud needs cloudconfig json passed via env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk`)
+		return cloudConfig, fmt.Errorf(`USSec/AzurePrivateCloud needs cloudconfig json passed via env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk`)
 	}
 
 	if err := json.Unmarshal([]byte(cloudConfigJson), &cloudConfig); err != nil {
-		return cloudConfig, fmt.Errorf(`unable to parse json for AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
+		return cloudConfig, fmt.Errorf(`unable to parse json for USSec/AzurePrivateCloud from env var AZURE_CLOUD_CONFIG or AZURE_CLOUD_CONFIG_FILE, see https://github.com/webdevops/go-common/tree/main/azuresdk: %w`, err)
 	}
 
 	return cloudConfig, nil

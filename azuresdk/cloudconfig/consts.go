@@ -13,6 +13,7 @@ const (
 	AzurePublicCloud     = CloudName("AzurePublicCloud")
 	AzureChinaCloud      = CloudName("AzureChinaCloud")
 	AzureGovernmentCloud = CloudName("AzureGovernmentCloud")
+	AzureSecretCloud     = CloudName("AzureSecretCloud")
 	AzurePrivateCloud    = CloudName("AzurePrivateCloud")
 
 	// Service name

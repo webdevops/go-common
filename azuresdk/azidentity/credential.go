@@ -72,6 +72,8 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 }
 
 func NewAzCliCredential() (azcore.TokenCredential, error) {
-	opts := azidentity.AzureCLICredentialOptions{}
+	opts := azidentity.AzureCLICredentialOptions{
+		AdditionallyAllowedTenants: []string{"*"},
+	}
 	return azidentity.NewAzureCLICredential(&opts)
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func BuildPrometheusMetricList(name string, metricConfig ConfigQueryMetric, row map[string]interface{}) (list map[string][]MetricRow) {
+func BuildPrometheusMetricList(name string, metricConfig Metric, row map[string]interface{}) (list map[string][]MetricRow) {
 	list = map[string][]MetricRow{}
 	idFieldList := map[string]string{}
 
@@ -104,7 +104,7 @@ func BuildPrometheusMetricList(name string, metricConfig ConfigQueryMetric, row 
 							fieldConfig.Metric = fmt.Sprintf("%s_%s", name, fieldName)
 						}
 
-						subMetricConfig := ConfigQueryMetric{}
+						subMetricConfig := Metric{}
 						if fieldConfig.Expand != nil {
 							subMetricConfig = *fieldConfig.Expand
 						}

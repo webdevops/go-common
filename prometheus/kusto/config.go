@@ -29,11 +29,11 @@ const (
 
 type (
 	Config struct {
-		Queries []ConfigQuery `json:"queries"`
+		Queries []Query `json:"queries"`
 	}
 
-	ConfigQuery struct {
-		*ConfigQueryMetric
+	Query struct {
+		*Metric
 		QueryMode     string    `json:"queryMode"`
 		Workspaces    *[]string `json:"workspaces"`
 		Metric        string    `json:"metric"`
@@ -43,33 +43,33 @@ type (
 		Subscriptions *[]string `json:"subscriptions"`
 	}
 
-	ConfigQueryMetric struct {
-		Value        *float64                 `json:"value"`
-		Fields       []ConfigQueryMetricField `json:"fields"`
-		Labels       map[string]string        `json:"labels"`
-		DefaultField ConfigQueryMetricField   `json:"defaultField"`
-		Publish      *bool                    `json:"publish"`
+	Metric struct {
+		Value        *float64          `json:"value"`
+		Fields       []MetricField     `json:"fields"`
+		Labels       map[string]string `json:"labels"`
+		DefaultField MetricField       `json:"defaultField"`
+		Publish      *bool             `json:"publish"`
 	}
 
-	ConfigQueryMetricField struct {
-		Name    string                         `json:"name"`
-		Metric  string                         `json:"metric"`
-		Source  string                         `json:"source"`
-		Target  string                         `json:"target"`
-		Type    string                         `json:"type"`
-		Labels  map[string]string              `json:"labels"`
-		Filters []ConfigQueryMetricFieldFilter `json:"filters"`
-		Expand  *ConfigQueryMetric             `json:"expand"`
+	MetricField struct {
+		Name    string              `json:"name"`
+		Metric  string              `json:"metric"`
+		Source  string              `json:"source"`
+		Target  string              `json:"target"`
+		Type    string              `json:"type"`
+		Labels  map[string]string   `json:"labels"`
+		Filters []MetricFieldFilter `json:"filters"`
+		Expand  *Metric             `json:"expand"`
 	}
 
-	ConfigQueryMetricFieldFilter struct {
+	MetricFieldFilter struct {
 		Type         string `json:"type"`
 		RegExp       string `json:"regexp"`
 		Replacement  string `json:"replacement"`
 		parsedRegexp *regexp.Regexp
 	}
 
-	ConfigQueryMetricFieldFilterParser struct {
+	MetricFieldFilterParser struct {
 		Type        string `json:"type"`
 		RegExp      string `json:"regexp"`
 		Replacement string `json:"replacement"`
@@ -90,15 +90,15 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *ConfigQuery) Validate() error {
-	if err := c.ConfigQueryMetric.Validate(); err != nil {
+func (c *Query) Validate() error {
+	if err := c.Metric.Validate(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *ConfigQueryMetric) Validate() error {
+func (c *Metric) Validate() error {
 	// validate default field
 	c.DefaultField.Name = "default"
 	if err := c.DefaultField.Validate(); err != nil {
@@ -115,7 +115,7 @@ func (c *ConfigQueryMetric) Validate() error {
 	return nil
 }
 
-func (c *ConfigQueryMetric) IsPublished() bool {
+func (c *Metric) IsPublished() bool {
 	if c.Publish != nil {
 		return *c.Publish
 	}
@@ -123,7 +123,7 @@ func (c *ConfigQueryMetric) IsPublished() bool {
 	return true
 }
 
-func (c *ConfigQueryMetricField) Validate() error {
+func (c *MetricField) Validate() error {
 	if c.Name == "" {
 		return errors.New("no field name set")
 	}
@@ -149,7 +149,7 @@ func (c *ConfigQueryMetricField) Validate() error {
 	return nil
 }
 
-func (c *ConfigQueryMetricField) GetType() (ret string) {
+func (c *MetricField) GetType() (ret string) {
 	ret = strings.ToLower(c.Type)
 
 	if ret == "" {
@@ -159,7 +159,7 @@ func (c *ConfigQueryMetricField) GetType() (ret string) {
 	return
 }
 
-func (c *ConfigQueryMetricFieldFilter) Validate() error {
+func (c *MetricFieldFilter) Validate() error {
 	if c.Type == "" {
 		return errors.New("no type name set")
 	}
@@ -180,7 +180,7 @@ func (c *ConfigQueryMetricFieldFilter) Validate() error {
 	return nil
 }
 
-func (m *ConfigQueryMetric) IsExpand(field string) bool {
+func (m *Metric) IsExpand(field string) bool {
 	for _, fieldConfig := range m.Fields {
 		if fieldConfig.Name == field {
 			if fieldConfig.IsExpand() {
@@ -193,12 +193,12 @@ func (m *ConfigQueryMetric) IsExpand(field string) bool {
 	return false
 }
 
-func (m *ConfigQueryMetric) GetFieldConfigMap() (list map[string][]ConfigQueryMetricField) {
-	list = map[string][]ConfigQueryMetricField{}
+func (m *Metric) GetFieldConfigMap() (list map[string][]MetricField) {
+	list = map[string][]MetricField{}
 
 	for _, field := range m.Fields {
 		if _, ok := list[field.Name]; !ok {
-			list[field.Name] = []ConfigQueryMetricField{}
+			list[field.Name] = []MetricField{}
 		}
 		list[field.GetSourceField()] = append(list[field.GetSourceField()], field)
 	}
@@ -206,7 +206,7 @@ func (m *ConfigQueryMetric) GetFieldConfigMap() (list map[string][]ConfigQueryMe
 	return
 }
 
-func (f *ConfigQueryMetricField) GetSourceField() (ret string) {
+func (f *MetricField) GetSourceField() (ret string) {
 	ret = f.Source
 	if ret == "" {
 		ret = f.Name
@@ -214,27 +214,27 @@ func (f *ConfigQueryMetricField) GetSourceField() (ret string) {
 	return
 }
 
-func (f *ConfigQueryMetricField) IsExpand() bool {
+func (f *MetricField) IsExpand() bool {
 	return f.Type == MetricFieldTypeExpand || f.Expand != nil
 }
 
-func (f *ConfigQueryMetricField) IsSourceField() bool {
+func (f *MetricField) IsSourceField() bool {
 	return f.Source != ""
 }
 
-func (f *ConfigQueryMetricField) IsTypeIgnore() bool {
+func (f *MetricField) IsTypeIgnore() bool {
 	return f.GetType() == MetricFieldTypeIgnore
 }
 
-func (f *ConfigQueryMetricField) IsTypeId() bool {
+func (f *MetricField) IsTypeId() bool {
 	return f.GetType() == MetricFieldTypeId
 }
 
-func (f *ConfigQueryMetricField) IsTypeValue() bool {
+func (f *MetricField) IsTypeValue() bool {
 	return f.GetType() == MetricFieldTypeValue
 }
 
-func (f *ConfigQueryMetricField) GetTargetFieldName(sourceName string) (ret string) {
+func (f *MetricField) GetTargetFieldName(sourceName string) (ret string) {
 	ret = sourceName
 	if f.Target != "" {
 		ret = f.Target
@@ -244,7 +244,7 @@ func (f *ConfigQueryMetricField) GetTargetFieldName(sourceName string) (ret stri
 	return
 }
 
-func (f *ConfigQueryMetricField) TransformString(value string) (ret string) {
+func (f *MetricField) TransformString(value string) (ret string) {
 	ret = value
 
 	switch f.Type {
@@ -282,13 +282,13 @@ func (f *ConfigQueryMetricField) TransformString(value string) (ret string) {
 	return
 }
 
-func (f *ConfigQueryMetricField) TransformFloat64(value float64) (ret string) {
+func (f *MetricField) TransformFloat64(value float64) (ret string) {
 	ret = fmt.Sprintf("%v", value)
 	ret = f.TransformString(ret)
 	return
 }
 
-func (f *ConfigQueryMetricField) TransformBool(value bool) (ret string) {
+func (f *MetricField) TransformBool(value bool) (ret string) {
 	if value {
 		ret = "true"
 	} else {
@@ -298,8 +298,8 @@ func (f *ConfigQueryMetricField) TransformBool(value bool) (ret string) {
 	return
 }
 
-func (f *ConfigQueryMetricFieldFilter) UnmarshalJSON(c []byte) error {
-	var multi ConfigQueryMetricFieldFilterParser
+func (f *MetricFieldFilter) UnmarshalJSON(c []byte) error {
+	var multi MetricFieldFilterParser
 	err := json.Unmarshal(c, &multi)
 	if err != nil {
 		var single string

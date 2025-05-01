@@ -17,7 +17,7 @@ func convertSubMetricInterfaceToArray(val interface{}) []interface{} {
 	return ret
 }
 
-func processFieldAndAddToMetric(fieldName string, value interface{}, fieldConfig ConfigQueryMetricField, metric *MetricRow) {
+func processFieldAndAddToMetric(fieldName string, value interface{}, fieldConfig MetricField, metric *MetricRow) {
 	labelName := fieldConfig.GetTargetFieldName(fieldName)
 
 	// upgrade to 64bit

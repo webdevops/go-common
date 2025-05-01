@@ -65,7 +65,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -129,7 +129,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -184,7 +184,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -364,7 +364,7 @@ defaultField:
 	foo, _ := json.Marshal(queryConfig)
 	fmt.Println(string(foo))
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(8)
@@ -472,7 +472,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -532,7 +532,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -571,9 +571,9 @@ func parseResourceGraphJsonToResultRow(t *testing.T, data string) map[string]int
 	return ret
 }
 
-func parseMetricConfig(t *testing.T, data string) ConfigQuery {
+func parseMetricConfig(t *testing.T, data string) Query {
 	t.Helper()
-	ret := ConfigQuery{}
+	ret := Query{}
 	if err := yaml.UnmarshalStrict([]byte(data), &ret); err != nil {
 		t.Fatalf(`unable to unmarshal query configuration yaml: %v`, err)
 	}

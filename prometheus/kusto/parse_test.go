@@ -2,10 +2,11 @@ package kusto
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 type (
@@ -64,7 +65,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -128,7 +129,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -183,7 +184,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -274,12 +275,6 @@ func TestResourceGraphArmResourceParsing(t *testing.T) {
 }`)
 
 	queryConfig := parseMetricConfig(t, `
-tagFields: &tagFields
-  - name: owner
-  - name: domain
-tagDefaultField: &defaultTagField
-  type: ignore
-
 metric: azurerm_managedclusters_aks_info
 query: |-
   Resources
@@ -312,8 +307,11 @@ fields:
     metric: azurerm_managedclusters_tags
     expand:
       value: 1
-      fields: *tagFields
-      defaultField: *defaultTagField
+      fields: &tagFields
+        - name: owner
+        - name: domain
+      defaultField: &defaultTagField
+        type: ignore
   -
     name: agentPoolProfiles
     metric: azurerm_managedclusters_aks_pool
@@ -363,7 +361,10 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	foo, _ := json.Marshal(queryConfig)
+	fmt.Println(string(foo))
+
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(8)
@@ -471,7 +472,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -531,7 +532,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, queryConfig.MetricConfig, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.ConfigQueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -573,7 +574,7 @@ func parseResourceGraphJsonToResultRow(t *testing.T, data string) map[string]int
 func parseMetricConfig(t *testing.T, data string) ConfigQuery {
 	t.Helper()
 	ret := ConfigQuery{}
-	if err := yaml.Unmarshal([]byte(data), &ret); err != nil {
+	if err := yaml.UnmarshalStrict([]byte(data), &ret); err != nil {
 		t.Fatalf(`unable to unmarshal query configuration yaml: %v`, err)
 	}
 	return ret

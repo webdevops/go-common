@@ -1,13 +1,14 @@
 package kusto
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
-	yaml "gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -28,50 +29,50 @@ const (
 
 type (
 	Config struct {
-		Queries []ConfigQuery `yaml:"queries"`
+		Queries []ConfigQuery `json:"queries"`
 	}
 
 	ConfigQuery struct {
-		MetricConfig  ConfigQueryMetric `yaml:",inline"`
-		QueryMode     string            `yaml:"queryMode"`
-		Workspaces    *[]string         `yaml:"workspaces"`
-		Metric        string            `yaml:"metric"`
-		Module        string            `yaml:"module"`
-		Query         string            `yaml:"query"`
-		Timespan      *string           `yaml:"timespan"`
-		Subscriptions *[]string         `yaml:"subscriptions"`
+		*ConfigQueryMetric
+		QueryMode     string    `json:"queryMode"`
+		Workspaces    *[]string `json:"workspaces"`
+		Metric        string    `json:"metric"`
+		Module        string    `json:"module"`
+		Query         string    `json:"query"`
+		Timespan      *string   `json:"timespan"`
+		Subscriptions *[]string `json:"subscriptions"`
 	}
 
 	ConfigQueryMetric struct {
-		Value        *float64                 `yaml:"value"`
-		Fields       []ConfigQueryMetricField `yaml:"fields"`
-		Labels       map[string]string        `yaml:"labels"`
-		DefaultField ConfigQueryMetricField   `yaml:"defaultField"`
-		Publish      *bool                    `yaml:"publish"`
+		Value        *float64                 `json:"value"`
+		Fields       []ConfigQueryMetricField `json:"fields"`
+		Labels       map[string]string        `json:"labels"`
+		DefaultField ConfigQueryMetricField   `json:"defaultField"`
+		Publish      *bool                    `json:"publish"`
 	}
 
 	ConfigQueryMetricField struct {
-		Name    string                         `yaml:"name"`
-		Metric  string                         `yaml:"metric"`
-		Source  string                         `yaml:"source"`
-		Target  string                         `yaml:"target"`
-		Type    string                         `yaml:"type"`
-		Labels  map[string]string              `yaml:"labels"`
-		Filters []ConfigQueryMetricFieldFilter `yaml:"filters"`
-		Expand  *ConfigQueryMetric             `yaml:"expand"`
+		Name    string                         `json:"name"`
+		Metric  string                         `json:"metric"`
+		Source  string                         `json:"source"`
+		Target  string                         `json:"target"`
+		Type    string                         `json:"type"`
+		Labels  map[string]string              `json:"labels"`
+		Filters []ConfigQueryMetricFieldFilter `json:"filters"`
+		Expand  *ConfigQueryMetric             `json:"expand"`
 	}
 
 	ConfigQueryMetricFieldFilter struct {
-		Type         string `yaml:"type"`
-		RegExp       string `yaml:"regexp"`
-		Replacement  string `yaml:"replacement"`
+		Type         string `json:"type"`
+		RegExp       string `json:"regexp"`
+		Replacement  string `json:"replacement"`
 		parsedRegexp *regexp.Regexp
 	}
 
 	ConfigQueryMetricFieldFilterParser struct {
-		Type        string `yaml:"type"`
-		RegExp      string `yaml:"regexp"`
-		Replacement string `yaml:"replacement"`
+		Type        string `json:"type"`
+		RegExp      string `json:"regexp"`
+		Replacement string `json:"replacement"`
 	}
 )
 
@@ -90,7 +91,7 @@ func (c *Config) Validate() error {
 }
 
 func (c *ConfigQuery) Validate() error {
-	if err := c.MetricConfig.Validate(); err != nil {
+	if err := c.ConfigQueryMetric.Validate(); err != nil {
 		return err
 	}
 
@@ -297,12 +298,12 @@ func (f *ConfigQueryMetricField) TransformBool(value bool) (ret string) {
 	return
 }
 
-func (f *ConfigQueryMetricFieldFilter) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (f *ConfigQueryMetricFieldFilter) UnmarshalJSON(c []byte) error {
 	var multi ConfigQueryMetricFieldFilterParser
-	err := unmarshal(&multi)
+	err := json.Unmarshal(c, &multi)
 	if err != nil {
 		var single string
-		err := unmarshal(&single)
+		err := json.Unmarshal(c, &single)
 		if err != nil {
 			return err
 		}

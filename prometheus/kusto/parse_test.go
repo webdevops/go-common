@@ -65,7 +65,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -129,7 +129,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -184,7 +184,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)
@@ -364,7 +364,7 @@ defaultField:
 	foo, _ := json.Marshal(queryConfig)
 	fmt.Println(string(foo))
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(8)
@@ -472,7 +472,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(1)
@@ -532,7 +532,7 @@ defaultField:
   type: ignore
 `)
 
-	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.Metric, resultRow)
+	metricList := BuildPrometheusMetricList(queryConfig.Metric, *queryConfig.QueryMetric, resultRow)
 
 	metricTestSuite := testingMetricResult{t: t, list: metricList}
 	metricTestSuite.assertMetricNames(2)

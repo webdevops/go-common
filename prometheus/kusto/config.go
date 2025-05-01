@@ -33,7 +33,7 @@ type (
 	}
 
 	Query struct {
-		*Metric
+		*QueryMetric
 		QueryMode     string    `json:"queryMode"`
 		Workspaces    *[]string `json:"workspaces"`
 		Metric        string    `json:"metric"`
@@ -43,7 +43,7 @@ type (
 		Subscriptions *[]string `json:"subscriptions"`
 	}
 
-	Metric struct {
+	QueryMetric struct {
 		Value        *float64          `json:"value"`
 		Fields       []MetricField     `json:"fields"`
 		Labels       map[string]string `json:"labels"`
@@ -59,7 +59,7 @@ type (
 		Type    string              `json:"type"`
 		Labels  map[string]string   `json:"labels"`
 		Filters []MetricFieldFilter `json:"filters"`
-		Expand  *Metric             `json:"expand"`
+		Expand  *QueryMetric        `json:"expand"`
 	}
 
 	MetricFieldFilter struct {
@@ -83,7 +83,7 @@ func (c *Config) Validate() error {
 
 	for _, queryConfig := range c.Queries {
 		if err := queryConfig.Validate(); err != nil {
-			return fmt.Errorf("query \"%v\": %w", queryConfig.Metric, err)
+			return fmt.Errorf("query \"%v\": %w", queryConfig.QueryMetric, err)
 		}
 	}
 
@@ -91,14 +91,14 @@ func (c *Config) Validate() error {
 }
 
 func (c *Query) Validate() error {
-	if err := c.Metric.Validate(); err != nil {
+	if err := c.QueryMetric.Validate(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Metric) Validate() error {
+func (c *QueryMetric) Validate() error {
 	// validate default field
 	c.DefaultField.Name = "default"
 	if err := c.DefaultField.Validate(); err != nil {
@@ -115,7 +115,7 @@ func (c *Metric) Validate() error {
 	return nil
 }
 
-func (c *Metric) IsPublished() bool {
+func (c *QueryMetric) IsPublished() bool {
 	if c.Publish != nil {
 		return *c.Publish
 	}
@@ -180,7 +180,7 @@ func (c *MetricFieldFilter) Validate() error {
 	return nil
 }
 
-func (m *Metric) IsExpand(field string) bool {
+func (m *QueryMetric) IsExpand(field string) bool {
 	for _, fieldConfig := range m.Fields {
 		if fieldConfig.Name == field {
 			if fieldConfig.IsExpand() {
@@ -193,7 +193,7 @@ func (m *Metric) IsExpand(field string) bool {
 	return false
 }
 
-func (m *Metric) GetFieldConfigMap() (list map[string][]MetricField) {
+func (m *QueryMetric) GetFieldConfigMap() (list map[string][]MetricField) {
 	list = map[string][]MetricField{}
 
 	for _, field := range m.Fields {

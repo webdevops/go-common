@@ -135,8 +135,8 @@ func (azureClient *ArmClient) initServiceDiscovery() {
 	}
 }
 
-// Connect triggers and logs connect message
-func (azureClient *ArmClient) Connect() error {
+// LazyConnect triggers and logs connect message
+func (azureClient *ArmClient) LazyConnect() error {
 	ctx := context.Background()
 
 	azureClient.logger.Infof(
@@ -157,6 +157,16 @@ func (azureClient *ArmClient) Connect() error {
 		azureClient.logger.With(zap.Any("client", tokenInfo.ToMap())).Infof(`using Azure client: %v`, tokenInfo.ToString())
 	} else {
 		azureClient.logger.Warn(`unable to get Azure client information, cannot parse accesstoken`)
+	}
+}
+
+// Connect triggers and logs connect message
+func (azureClient *ArmClient) Connect() error {
+	ctx := context.Background()
+
+	err := azureClient.LazyConnect()
+	if err != nil {
+		return err
 	}
 
 	subscriptionList, err := azureClient.ListSubscriptions(ctx)

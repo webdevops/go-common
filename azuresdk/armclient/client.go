@@ -158,6 +158,8 @@ func (azureClient *ArmClient) LazyConnect() error {
 	} else {
 		azureClient.logger.Warn(`unable to get Azure client information, cannot parse accesstoken`)
 	}
+
+	return nil
 }
 
 // Connect triggers and logs connect message

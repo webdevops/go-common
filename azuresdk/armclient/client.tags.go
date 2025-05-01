@@ -284,7 +284,7 @@ func (tagmgr *ArmClientTagManager) GetTagsForResource(ctx context.Context, resou
 		return nil, err
 	}
 
-	return tags.TagsResource.Properties, nil
+	return tags.Properties, nil
 }
 
 func (tagmgr *ArmClientTagManager) ParseTagConfig(tags []string) (*ResourceTagManager, error) {

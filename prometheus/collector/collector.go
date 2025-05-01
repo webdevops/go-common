@@ -499,7 +499,7 @@ func (c *Collector) GetMetricList(name string) *MetricList {
 // cleanupMetricLists resets all registered metric vec
 func (c *Collector) cleanupMetricLists() {
 	for _, metric := range c.data.Metrics {
-		metric.MetricList.Reset()
+		metric.Reset()
 	}
 }
 

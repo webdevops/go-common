@@ -12,6 +12,8 @@ import (
 )
 
 func AutoProcMemLimit(logger *zap.SugaredLogger) {
+	logger.Infof(`detecting system resources`)
+
 	// set procs
 	_, err := maxprocs.Set(maxprocs.Logger(logger.Infof))
 	if err != nil {

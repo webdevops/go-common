@@ -143,8 +143,8 @@ func (azureClient *ArmClient) LazyConnect() error {
 	azureClient.logger.Info(
 		`connecting to Azure`,
 		slog.String("azureEnvironment", string(azureClient.cloud.Name)),
-		slog.String("AzureAD", azureClient.cloud.ActiveDirectoryAuthorityHost),
-		slog.String("ResourceManager", azureClient.cloud.Services[cloud.ResourceManager].Endpoint),
+		slog.String("msGraph", azureClient.cloud.ActiveDirectoryAuthorityHost),
+		slog.String("resourceManager", azureClient.cloud.Services[cloud.ResourceManager].Endpoint),
 	)
 
 	// try to get token

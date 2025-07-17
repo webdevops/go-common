@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -66,8 +67,8 @@ func BuildCacheTag(prefix string, val ...interface{}) *string {
 }
 
 // EnableCache alias of SetCache
-func (c *Collector) EnableCache(cache string, cacheTag *string) {
-	c.SetCache(&cache, cacheTag)
+func (c *Collector) EnableCache(cache string, cacheTag *string) error {
+	return c.SetCache(&cache, cacheTag)
 }
 
 // SetCache enables caching of collector with local file and azblob support
@@ -76,10 +77,10 @@ func (c *Collector) EnableCache(cache string, cacheTag *string) {
 //	    path or file://path/to/file will store cached metrics in file
 //		   azblob://storageaccount.blob.core.windows.net/container/blob will store cached metrics in storageaccount
 //		 cacheTag is used to force restore, if nil cacheTag is ignored and otherwise enforced
-func (c *Collector) SetCache(cache *string, cacheTag *string) {
+func (c *Collector) SetCache(cache *string, cacheTag *string) error {
 	if cache == nil {
 		c.cache = nil
-		return
+		return nil
 	}
 
 	rawSpec := *cache
@@ -98,19 +99,19 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		c.cache.protocol = cacheProtocolAzBlob
 		parsedUrl, err := url.Parse(rawSpec)
 		if err != nil {
-			c.logger.Fatal(err)
+			return err
 		}
 		c.cache.url = parsedUrl
 
 		azureClient, err := armclient.NewArmClientFromEnvironment(c.logger)
 		if err != nil {
-			c.logger.Fatal(err)
+			return err
 		}
 
 		storageAccount := fmt.Sprintf(`https://%v/`, c.cache.url.Hostname())
 		pathParts := strings.Split(c.cache.url.Path, "/")
 		if len(pathParts) < 2 {
-			c.logger.Fatalf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
+			return fmt.Errorf(`azblob path needs to be specified as azblob://storageaccount.blob.core.windows.net/container/blob, got: %v`, rawSpec)
 		}
 
 		c.cache.spec["azblob:container"] = pathParts[0]
@@ -120,7 +121,7 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		azblobOpts := azblob.ClientOptions{ClientOptions: *azureClient.NewAzCoreClientOptions()}
 		client, err := azblob.NewClient(storageAccount, azureClient.GetCred(), &azblobOpts)
 		if err != nil {
-			c.logger.Fatal(err)
+			return err
 		}
 
 		c.cache.client = client
@@ -129,12 +130,12 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		c.cache.protocol = cacheProtocolK8sConfigMap
 		parsedUrl, err := url.Parse(rawSpec)
 		if err != nil {
-			c.logger.Fatal(err)
+			return err
 		}
 		c.cache.url = parsedUrl
 		pathParts := strings.SplitN(parsedUrl.Path, "/", 3)
 		if len(pathParts) < 3 {
-			c.logger.Fatalf(`azblob path needs to be specified as k8scm://namespace/name, got: %v`, rawSpec)
+			return fmt.Errorf(`azblob path needs to be specified as k8scm://namespace/name, got: %v`, rawSpec)
 		}
 
 		c.cache.spec["kubernetes:namespace"] = c.cache.url.Hostname()
@@ -146,12 +147,12 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		// creates the in-cluster config
 		config, err := rest.InClusterConfig()
 		if err != nil {
-			c.logger.Fatal(err)
+			return err
 		}
 		// creates the client
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			c.logger.Fatal(err.Error())
+			return err
 		}
 
 		c.cache.client = client.CoreV1()
@@ -159,6 +160,8 @@ func (c *Collector) SetCache(cache *string, cacheTag *string) {
 		c.cache.protocol = cacheProtocolFile
 		c.cache.spec["file:path"] = rawSpec
 	}
+
+	return nil
 }
 
 // DisableCache disables all caching
@@ -175,14 +178,14 @@ func (c *Collector) collectionRestoreCache() bool {
 	if cacheContent, exists := c.cacheRead(); exists {
 		restoredData := NewCollectorData()
 
-		c.logger.Infof(`restoring state from cache: %s`, c.cache.raw)
+		c.logger.Info(`restoring state from cache`, slog.String("cacheSpec", c.cache.raw))
 
 		err := json.Unmarshal(cacheContent, &restoredData)
 		if err == nil {
 			if c.cache.tag != nil {
 				if restoredData.Tag == nil || to.String(c.cache.tag) != to.String(restoredData.Tag) {
 					// cache tag check is enforced but there is a mismatch
-					c.logger.Infof(`cache tag mismatch, ignoring cache`)
+					c.logger.Info(`cache tag mismatch, ignoring cache`)
 					return false
 				}
 			}
@@ -213,13 +216,13 @@ func (c *Collector) collectionRestoreCache() bool {
 					c.lastScrapeTime = restoredData.Created
 				}
 
-				c.logger.Infof(`restored state from cache: "%s" (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
+				c.logger.Info(`restored state from cache`, slog.String("cacheSpec", c.cache.raw), slog.Time("expiry", c.data.Expiry.UTC()))
 				return true
 			} else {
-				c.logger.Infof(`ignoring cached state, already expired`)
+				c.logger.Info(`ignoring cached state, already expired`)
 			}
 		} else {
-			c.logger.Warnf(`unable to decode cache: %v`, err.Error())
+			c.logger.Warn(`unable to decode cache`, slog.Any("error", err))
 		}
 	}
 
@@ -239,9 +242,9 @@ func (c *Collector) collectionSaveCache() {
 
 	if jsonData, err := json.Marshal(c.data); err == nil {
 		c.cacheStore(jsonData)
-		c.logger.Infof(`saved state to cache: %s (expiring %s)`, c.cache.raw, c.data.Expiry.UTC().String())
+		c.logger.Info(`saved state to cache`, slog.String("cacheSpec", c.cache.raw), slog.Time("expiry", c.data.Expiry.UTC()))
 	} else {
-		c.logger.Errorf(`failed to serialize state for cache: %v`, err.Error())
+		c.logger.Error(`failed to serialize state for cache`, slog.Any("error", err.Error()))
 	}
 
 }
@@ -293,7 +296,7 @@ func (c *Collector) cacheStore(content []byte) {
 		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 			err := os.Mkdir(dirPath, 0700)
 			if err != nil {
-				c.logger.Fatal(err)
+				panic(err)
 			}
 		}
 
@@ -309,18 +312,18 @@ func (c *Collector) cacheStore(content []byte) {
 		// write to temp file first
 		err := os.WriteFile(tmpFilePath, content, 0600) // #nosec inside container
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 
 		// rename file to final cache file (atomic operation)
 		err = os.Rename(tmpFilePath, filePath)
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 	case cacheProtocolAzBlob:
 		_, err := c.cache.client.(*azblob.Client).UploadBuffer(c.context, c.cache.spec["azblob:container"], c.cache.spec["azblob:blob"], content, nil)
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 	case cacheProtocolK8sConfigMap:
 		// Since the kubernetes configmap can only hold 1MB of data in total, we compress the data before store them
@@ -328,13 +331,13 @@ func (c *Collector) cacheStore(content []byte) {
 		wb64 := base64.NewEncoder(base64.StdEncoding, &buf64)
 		wgz := gzip.NewWriter(wb64)
 		if _, err := wgz.Write(content); err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 		if err := wgz.Close(); err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 		if err := wb64.Close(); err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 
 		configMap := corev1apply.ConfigMap(c.cache.spec["kubernetes:configmap"], c.cache.spec["kubernetes:namespace"])
@@ -350,7 +353,7 @@ func (c *Collector) cacheStore(content []byte) {
 		)
 
 		if err != nil {
-			c.logger.Fatalf("Unable to update kubernetes configmap: %v", err)
+			panic(fmt.Errorf(`unable to update kubernetes configmap: %w`, err))
 		}
 	}
 }

@@ -3,9 +3,9 @@ package armclient
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -18,12 +18,12 @@ const (
 // ListCachedResourceGroups return cached list of Azure ResourceGroups as map (key is name of ResourceGroup)
 func (azureClient *ArmClient) ListCachedResourceGroups(ctx context.Context, subscriptionID string) (map[string]*armresources.ResourceGroup, error) {
 	result, err := azureClient.cacheData(fmt.Sprintf(CacheIdentifierResourceGroupList, subscriptionID), func() (interface{}, error) {
-		azureClient.logger.With(zap.String("subscriptionID", subscriptionID)).Debug("updating cached Azure ResourceGroup list")
+		azureClient.logger.With(slog.String("subscriptionID", subscriptionID)).Debug("updating cached Azure ResourceGroup list")
 		list, err := azureClient.ListResourceGroups(ctx, subscriptionID)
 		if err != nil {
 			return list, err
 		}
-		azureClient.logger.With(zap.String("subscriptionID", subscriptionID)).Debugf("found %v Azure ResourceGroups", len(list))
+		azureClient.logger.With(slog.String("subscriptionID", subscriptionID)).Debug(fmt.Sprintf("found %v Azure ResourceGroups", len(list)))
 		return list, nil
 	})
 	if err != nil {

@@ -2,10 +2,10 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/remeh/sizedwaitgroup"
-	"go.uber.org/zap"
 )
 
 type (
@@ -24,7 +24,7 @@ func (p *Processor) Setup(collector *Collector) {
 	p.Collector = collector
 }
 
-func (p *Processor) Logger() *zap.SugaredLogger {
+func (p *Processor) Logger() *slog.Logger {
 	return p.Collector.logger
 }
 

@@ -7,17 +7,15 @@ import (
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	humanize "github.com/dustin/go-humanize"
 	"go.uber.org/automaxprocs/maxprocs"
-	"go.uber.org/zap"
-	"go.uber.org/zap/exp/zapslog"
 )
 
-func AutoProcMemLimit(logger *zap.SugaredLogger) {
-	logger.Infof(`detecting system resources`)
+func AutoProcMemLimit(logger *slog.Logger) {
+	logger.Info(`detecting system resources`)
 
 	// set procs
-	_, err := maxprocs.Set(maxprocs.Logger(logger.Infof))
+	_, err := maxprocs.Set(maxprocs.Logger(logger.Info))
 	if err != nil {
-		logger.Error(err)
+		logger.Error(`failed to set GOMAXPROCS`, "error", err)
 	}
 
 	// set memory limit
@@ -28,13 +26,13 @@ func AutoProcMemLimit(logger *zap.SugaredLogger) {
 				memlimit.FromSystem,
 			),
 		),
-		memlimit.WithLogger(slog.New(zapslog.NewHandler(logger.Desugar().Core()))),
+		memlimit.WithLogger(logger),
 	)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(`failed to set GOMEMLIMIT`, "error", err)
 	}
 
 	goProcs := runtime.GOMAXPROCS(0)
 	goMaxMem := uint64(goMemLimit) // nolint:gosec
-	logger.Infof(`GO resources updated: GOMAXPROC=%v GOMEMLIMIT=%v`, goProcs, humanize.Bytes(goMaxMem))
+	logger.Info(`GO resources updated`, "GOMAXPROC", goProcs, "GOMEMLIMIT", humanize.Bytes(goMaxMem))
 }

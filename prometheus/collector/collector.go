@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -11,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/robfig/cron"
-	"go.uber.org/zap"
 
 	prometheusCommon "github.com/webdevops/go-common/prometheus"
 )
@@ -47,7 +47,7 @@ type Collector struct {
 	concurrency int
 	waitGroup   *sizedwaitgroup.SizedWaitGroup
 
-	logger *zap.SugaredLogger
+	logger *slog.Logger
 
 	processor ProcessorInterface
 }
@@ -79,7 +79,7 @@ func NewCollectorData() *CollectorData {
 }
 
 // New creates new collector
-func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *Collector {
+func New(name string, processor ProcessorInterface, logger *slog.Logger) *Collector {
 	c := &Collector{}
 	c.context = context.Background()
 	c.Name = name
@@ -94,7 +94,7 @@ func New(name string, processor ProcessorInterface, logger *zap.SugaredLogger) *
 		10 * time.Minute,
 	}
 	if logger != nil {
-		c.logger = logger.With(zap.String(`collector`, name))
+		c.logger = logger.With(slog.String(`collector`, name))
 	}
 	processor.Setup(c)
 
@@ -234,9 +234,9 @@ func (c *Collector) Start() error {
 		go func() {
 			if c.cache != nil && c.runCacheRestore() {
 				c.logger.With(
-					zap.Float64("duration", c.lastScrapeDuration.Seconds()),
-					zap.Time("nextRun", c.nextScrapeTime.UTC()),
-				).Infof("finished cache restore, next run in %s", c.sleepTime.String())
+					slog.Float64("duration", c.lastScrapeDuration.Seconds()),
+					slog.Time("nextRun", c.nextScrapeTime.UTC()),
+				).Info("finished cache restore", slog.Duration("duration", *c.sleepTime))
 
 				// wait until next run
 				time.Sleep(*c.sleepTime)
@@ -281,7 +281,7 @@ func (c *Collector) runCacheRestore() (result bool) {
 			defer func() {
 				// restore failed, reset metrics
 				if err := recover(); err != nil {
-					c.logger.Warnf(`caught panic while restore cached metrics: %v`, err)
+					c.logger.Warn(`caught panic while restore cached metrics`, slog.Any("error", err))
 
 					c.logger.Info(`enabling normal collection run, ignoring and resetting cached metrics`)
 					c.resetMetrics()
@@ -322,7 +322,7 @@ func (c *Collector) run() {
 	} else {
 		metricSuccess.WithLabelValues(c.Name).Set(0)
 		if backoffDuration := c.backoffDuration(); backoffDuration != nil {
-			c.logger.Warnf(`detected unsuccessful run, will retry next run in %v`, backoffDuration.String())
+			c.logger.Warn(`detected unsuccessful run, will retry`, slog.Duration("duration", *backoffDuration))
 			c.SetNextSleepDuration(*backoffDuration)
 		}
 	}
@@ -334,9 +334,9 @@ func (c *Collector) run() {
 	c.collectionFinish()
 
 	c.logger.With(
-		zap.Float64("duration", c.lastScrapeDuration.Seconds()),
-		zap.Time("nextRun", c.nextScrapeTime.UTC()),
-	).Infof("finished metrics collection, next run in %s", c.sleepTime.String())
+		slog.Float64("duration", c.lastScrapeDuration.Seconds()),
+		slog.Time("nextRun", c.nextScrapeTime.UTC()),
+	).Info("finished metrics collection", slog.Duration("duration", *c.sleepTime))
 }
 
 // collectRun starts collector run and handles panics
@@ -363,9 +363,9 @@ func (c *Collector) collectRun(doCollect bool) bool {
 						if err := recover(); err != nil {
 							switch v := err.(type) {
 							case error:
-								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v.Error())
+								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), slog.Any("error", v.Error()))
 							default:
-								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), v)
+								c.logger.Error(fmt.Sprintf("panic occurred (panic threshold %v of %v): ", panicCounter, c.panic.threshold), slog.Any("error", v))
 							}
 						}
 					}

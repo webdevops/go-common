@@ -3,13 +3,13 @@ package armclient
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"runtime/debug"
 	"strings"
 	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/remeh/sizedwaitgroup"
-	"go.uber.org/zap"
 )
 
 type (
@@ -51,7 +51,7 @@ func (i *SubscriptionsIterator) SetConcurrency(concurrency int) *SubscriptionsIt
 }
 
 // ForEach Loop for each Azure Subscription without concurrency
-func (i *SubscriptionsIterator) ForEach(logger *zap.SugaredLogger, callback func(subscription *armsubscriptions.Subscription, logger *zap.SugaredLogger)) error {
+func (i *SubscriptionsIterator) ForEach(logger *slog.Logger, callback func(subscription *armsubscriptions.Subscription, logger *slog.Logger)) error {
 	subscriptionList, err := i.ListSubscriptions()
 	if err != nil {
 		return err
@@ -59,8 +59,8 @@ func (i *SubscriptionsIterator) ForEach(logger *zap.SugaredLogger, callback func
 
 	for _, subscription := range subscriptionList {
 		contextLogger := logger.With(
-			zap.String(`subscriptionID`, *subscription.SubscriptionID),
-			zap.String(`subscriptionName`, *subscription.DisplayName),
+			slog.String(`subscriptionID`, *subscription.SubscriptionID),
+			slog.String(`subscriptionName`, *subscription.DisplayName),
 		)
 		callback(subscription, contextLogger)
 	}
@@ -69,7 +69,7 @@ func (i *SubscriptionsIterator) ForEach(logger *zap.SugaredLogger, callback func
 }
 
 // ForEachAsync Loop for each Azure Subscription with concurrency as background gofunc
-func (i *SubscriptionsIterator) ForEachAsync(logger *zap.SugaredLogger, callback func(subscription *armsubscriptions.Subscription, logger *zap.SugaredLogger)) error {
+func (i *SubscriptionsIterator) ForEachAsync(logger *slog.Logger, callback func(subscription *armsubscriptions.Subscription, logger *slog.Logger)) error {
 	var panicList = []string{}
 	panicLock := sync.Mutex{}
 	wg := sizedwaitgroup.New(i.concurrency)
@@ -85,8 +85,8 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *zap.SugaredLogger, callback
 		go func(subscription *armsubscriptions.Subscription) {
 			defer wg.Done()
 			contextLogger := logger.With(
-				zap.String(`subscriptionID`, *subscription.SubscriptionID),
-				zap.String(`subscriptionName`, *subscription.DisplayName),
+				slog.String(`subscriptionID`, *subscription.SubscriptionID),
+				slog.String(`subscriptionName`, *subscription.DisplayName),
 			)
 
 			finished := false
@@ -104,7 +104,7 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *zap.SugaredLogger, callback
 							msg = fmt.Sprintf("panic: %s\n%s", v, debug.Stack())
 						}
 
-						contextLogger.Errorf(msg)
+						contextLogger.Error(msg)
 						panicList = append(panicList, msg)
 					}
 				}

@@ -47,7 +47,7 @@ func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[
 		if err != nil {
 			return nil, err
 		}
-		azureClient.logger.Debugf("found %v Azure Subscriptions", len(list))
+		azureClient.logger.Debug(fmt.Sprintf("found %v Azure Subscriptions", len(list)))
 		return list, nil
 	})
 	if err != nil {

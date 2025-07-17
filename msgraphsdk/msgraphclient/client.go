@@ -1,6 +1,8 @@
 package msgraphclient
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -10,7 +12,6 @@ import (
 	a "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/patrickmn/go-cache"
-	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/azuresdk/azidentity"
 	"github.com/webdevops/go-common/azuresdk/cloudconfig"
@@ -22,7 +23,7 @@ type (
 		cloud    cloudconfig.CloudEnvironment
 		tenantID string
 
-		logger *zap.SugaredLogger
+		logger *slog.Logger
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
@@ -36,7 +37,7 @@ type (
 )
 
 // NewMsGraphClientFromEnvironment creates new MS Graph client from environment settings
-func NewMsGraphClientFromEnvironment(logger *zap.SugaredLogger) (*MsGraphClient, error) {
+func NewMsGraphClientFromEnvironment(logger *slog.Logger) (*MsGraphClient, error) {
 	var azureEnvironment, azureTenant string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -44,19 +45,19 @@ func NewMsGraphClientFromEnvironment(logger *zap.SugaredLogger) (*MsGraphClient,
 		azureEnvironment = string(cloudconfig.AzurePublicCloud)
 
 		if err := os.Setenv("AZURE_ENVIRONMENT", azureEnvironment); err != nil {
-			logger.Panic(`unable to set AZURE_ENVIRONMENT`)
+			return nil, fmt.Errorf(`unable to set AZURE_ENVIRONMENT`)
 		}
 	}
 
 	if azureTenant = os.Getenv("AZURE_TENANT_ID"); azureTenant == "" {
-		logger.Panic(`env var AZURE_TENANT_ID is not set`)
+		return nil, fmt.Errorf(`env var AZURE_TENANT_ID is not set`)
 	}
 
 	return NewMsGraphClientWithCloudName(azureEnvironment, azureTenant, logger)
 }
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *zap.SugaredLogger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *slog.Logger) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
 	client.tenantID = tenantID
@@ -71,10 +72,10 @@ func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string,
 }
 
 // NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
-func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *zap.SugaredLogger) (*MsGraphClient, error) {
+func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *slog.Logger) (*MsGraphClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
-		logger.Panic(err.Error())
+		return nil, err
 	}
 	return NewMsGraphClient(cloudConfig, tenantID, logger), nil
 }
@@ -92,7 +93,7 @@ func (c *MsGraphClient) ServiceClient() *msgraphsdk.GraphServiceClient {
 
 		client, err := msgraphsdk.NewGraphServiceClientWithCredentialsAndHosts(c.getCred(), scopes, nil)
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 
 		// set endpoint from cloudconfig
@@ -113,12 +114,12 @@ func (c *MsGraphClient) RequestAdapter() *msgraphsdk.GraphRequestAdapter {
 	if c.adapter == nil {
 		auth, err := a.NewAzureIdentityAuthenticationProvider(c.getCred())
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 
 		adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 
 		// set endpoint from cloudconfig
@@ -139,7 +140,7 @@ func (c *MsGraphClient) getCred() azcore.TokenCredential {
 	if c.cred == nil {
 		cred, err := azidentity.NewAzDefaultCredential(c.NewAzCoreClientOptions())
 		if err != nil {
-			c.logger.Fatal(err)
+			panic(err)
 		}
 		c.cred = &cred
 	}

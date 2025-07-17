@@ -27,7 +27,7 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Name:          AzurePublicCloud,
 			Configuration: cloud.AzurePublic,
 		}, nil
-		config.Configuration.Services = maps.Clone(config.Configuration.Services)
+		config.Services = maps.Clone(config.Services)
 		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://graph.microsoft.com/",
 			Endpoint: "https://graph.microsoft.com",
@@ -44,7 +44,7 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Name:          AzureChinaCloud,
 			Configuration: cloud.AzureChina,
 		}, nil
-		config.Configuration.Services = maps.Clone(config.Configuration.Services)
+		config.Services = maps.Clone(config.Services)
 		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://microsoftgraph.chinacloudapi.cn/",
 			Endpoint: "https://microsoftgraph.chinacloudapi.cn",
@@ -61,7 +61,7 @@ func NewCloudConfig(cloudName string) (config CloudEnvironment, err error) {
 			Name:          AzureGovernmentCloud,
 			Configuration: cloud.AzureGovernment,
 		}, nil
-		config.Configuration.Services = maps.Clone(config.Configuration.Services)
+		config.Services = maps.Clone(config.Services)
 		injectServiceConfig(&config.Configuration, ServiceNameMicrosoftGraph, cloud.ServiceConfiguration{
 			Audience: "https://login.microsoftonline.us/",
 			Endpoint: "https://login.microsoftonline.us",

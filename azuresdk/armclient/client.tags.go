@@ -3,6 +3,7 @@ package armclient
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 
 	"github.com/webdevops/go-common/utils/to"
 )
@@ -32,7 +32,7 @@ const (
 type (
 	ArmClientTagManager struct {
 		client *ArmClient
-		logger *zap.SugaredLogger
+		logger *slog.Logger
 	}
 )
 
@@ -181,7 +181,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 					result.TagValue = val
 					result.Source = AzureTagSourceResource
 				} else {
-					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					tagmgr.logger.Debug(`unable to fetch tagValue`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 					result.TagValue = ""
 				}
 			}
@@ -191,7 +191,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 					result.TagValue = val
 					result.Source = AzureTagSourceResourceGroup
 				} else {
-					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					tagmgr.logger.Debug(`unable to fetch tagValue`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 					result.TagValue = ""
 				}
 			}
@@ -201,7 +201,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 					result.TagValue = val
 					result.Source = AzureTagSourceSubscription
 				} else {
-					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s": %v`, resourceID, err.Error())
+					tagmgr.logger.Debug(`unable to fetch tagValue`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 					result.TagValue = ""
 				}
 			}
@@ -216,7 +216,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 					result.TagValue = val
 					result.Source = AzureTagSourceResourceGroup
 				} else {
-					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from ResourceGroup): %v`, resourceID, err.Error())
+					tagmgr.logger.Debug(`unable to fetch tagValue (inherit from ResourceGroup)`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 					result.TagValue = ""
 				}
 			}
@@ -229,7 +229,7 @@ func (tagmgr *ArmClientTagManager) GetResourceTag(ctx context.Context, resourceI
 					result.TagValue = val
 					result.Source = AzureTagSourceSubscription
 				} else {
-					tagmgr.logger.Debugf(`unable to fetch tagValue for resourceID "%s" (inherit from Subscription): %v`, resourceID, err.Error())
+					tagmgr.logger.Debug(`unable to fetch tagValue (inherit from Subscription)`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 					result.TagValue = ""
 				}
 			}
@@ -301,7 +301,7 @@ func (tagmgr *ArmClientTagManager) ParseTagConfigWithCustomPrefix(tags []string,
 	for _, tag := range tags {
 		tagConfig, err := tagmgr.parseTagConfig(tag, labelPrefix)
 		if err != nil {
-			tagmgr.logger.Panicf(`unable to parse tag config "%s": %v`, tag, err.Error())
+			panic(fmt.Errorf(`unable to parse tag config "%s": %v`, tag, err.Error()))
 		}
 		config.Tags[i] = tagConfig
 		i++
@@ -389,7 +389,7 @@ func (c *ResourceTagManager) AddResourceTagsToPrometheusLabels(ctx context.Conte
 	if resourceID != "" {
 		resourceTags, err := c.client.TagManager.GetResourceTag(ctx, resourceID, c)
 		if err != nil {
-			c.client.TagManager.logger.Warnf(`unable to fetch resource tags for resource "%s": %v`, resourceID, err.Error())
+			c.client.TagManager.logger.Warn(`unable to fetch resource tags for resource`, slog.String("resourceID", resourceID), slog.String("error", err.Error()))
 		}
 
 		for _, tag := range resourceTags {

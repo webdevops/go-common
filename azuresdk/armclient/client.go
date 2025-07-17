@@ -2,6 +2,8 @@ package armclient
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -11,7 +13,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	cache "github.com/patrickmn/go-cache"
-	zap "go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/labels"
 
 	commonAzidentity "github.com/webdevops/go-common/azuresdk/azidentity"
@@ -32,7 +33,7 @@ type (
 
 		cloud cloudconfig.CloudEnvironment
 
-		logger *zap.SugaredLogger
+		logger *slog.Logger
 
 		cache    *cache.Cache
 		cacheTtl time.Duration
@@ -49,7 +50,7 @@ type (
 )
 
 // NewArmClientFromEnvironment creates new Azure SDK ARM client from environment settings
-func NewArmClientFromEnvironment(logger *zap.SugaredLogger) (*ArmClient, error) {
+func NewArmClientFromEnvironment(logger *slog.Logger) (*ArmClient, error) {
 	var azureEnvironment string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -57,7 +58,7 @@ func NewArmClientFromEnvironment(logger *zap.SugaredLogger) (*ArmClient, error) 
 		azureEnvironment = string(cloudconfig.AzurePublicCloud)
 
 		if err := os.Setenv("AZURE_ENVIRONMENT", azureEnvironment); err != nil {
-			logger.Panic(`unable to set AZURE_ENVIRONMENT`)
+			return nil, fmt.Errorf(`unable to set AZURE_ENVIRONMENT`)
 		}
 	}
 
@@ -65,7 +66,7 @@ func NewArmClientFromEnvironment(logger *zap.SugaredLogger) (*ArmClient, error) 
 }
 
 // NewArmClient creates new Azure SDK ARM client
-func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredLogger) *ArmClient {
+func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *slog.Logger) *ArmClient {
 	client := &ArmClient{}
 	client.cloud = cloudConfig
 
@@ -74,7 +75,7 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredL
 
 	client.TagManager = &ArmClientTagManager{
 		client: client,
-		logger: logger.With(zap.String("component", "armClientTagManager")),
+		logger: logger.With(slog.String("component", "armClientTagManager")),
 	}
 
 	client.initCache()
@@ -84,10 +85,10 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *zap.SugaredL
 }
 
 // NewArmClientWithCloudName creates new Azure SDK ARM client with environment name as string
-func NewArmClientWithCloudName(cloudName string, logger *zap.SugaredLogger) (*ArmClient, error) {
+func NewArmClientWithCloudName(cloudName string, logger *slog.Logger) (*ArmClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
-		logger.Panic(err.Error())
+		return nil, err
 	}
 
 	return NewArmClient(cloudConfig, logger), nil
@@ -100,7 +101,7 @@ func (azureClient *ArmClient) initCache() {
 		if ttl, err := time.ParseDuration(val); err == nil {
 			cacheTtl = ttl
 		} else {
-			azureClient.logger.Fatalf(`%s is not a valid value, got "%v", expected duration`, EnvVarServiceDiscoveryTtl, val)
+			panic(fmt.Errorf(`%s is not a valid value, got "%v", expected duration`, EnvVarServiceDiscoveryTtl, val))
 		}
 	}
 	azureClient.SetCacheTtl(cacheTtl)
@@ -129,7 +130,7 @@ func (azureClient *ArmClient) initServiceDiscovery() {
 	if val := os.Getenv(EnvVarServiceDiscoverySubscriptionTagSelector); val != "" {
 		selector, err := labels.Parse(val)
 		if err != nil {
-			azureClient.logger.Panic(err)
+			panic(err)
 		}
 		azureClient.serviceDiscovery.subscriptionTagSelector = &selector
 	}
@@ -139,11 +140,11 @@ func (azureClient *ArmClient) initServiceDiscovery() {
 func (azureClient *ArmClient) LazyConnect() error {
 	ctx := context.Background()
 
-	azureClient.logger.Infof(
-		`connecting to Azure Environment "%v" (AzureAD:%s ResourceManager:%s)`,
-		azureClient.cloud.Name,
-		azureClient.cloud.ActiveDirectoryAuthorityHost,
-		azureClient.cloud.Services[cloud.ResourceManager].Endpoint,
+	azureClient.logger.Info(
+		`connecting to Azure`,
+		slog.String("azureEnvironment", string(azureClient.cloud.Name)),
+		slog.String("AzureAD", azureClient.cloud.ActiveDirectoryAuthorityHost),
+		slog.String("ResourceManager", azureClient.cloud.Services[cloud.ResourceManager].Endpoint),
 	)
 
 	// try to get token
@@ -154,7 +155,7 @@ func (azureClient *ArmClient) LazyConnect() error {
 	}
 
 	if tokenInfo := commonAzidentity.ParseAccessToken(accessToken); tokenInfo != nil {
-		azureClient.logger.With(zap.Any("client", tokenInfo.ToMap())).Infof(`using Azure client: %v`, tokenInfo.ToString())
+		azureClient.logger.With(slog.Any("client", tokenInfo.ToMap())).Info(`using Azure client`, slog.String("token", tokenInfo.ToString()))
 	} else {
 		azureClient.logger.Warn(`unable to get Azure client information, cannot parse accesstoken`)
 	}
@@ -176,9 +177,9 @@ func (azureClient *ArmClient) Connect() error {
 		return err
 	}
 
-	azureClient.logger.Infof(`found %v Azure Subscriptions`, len(subscriptionList))
+	azureClient.logger.Info(fmt.Sprintf(`found %v Azure Subscriptions`, len(subscriptionList)))
 	for subscriptionId, subscription := range subscriptionList {
-		azureClient.logger.Debugf(`found Azure Subscription "%v" (%v)`, subscriptionId, to.String(subscription.DisplayName))
+		azureClient.logger.Debug(fmt.Sprintf(`found Azure Subscription "%v" (%v)`, subscriptionId, to.String(subscription.DisplayName)))
 	}
 
 	return nil

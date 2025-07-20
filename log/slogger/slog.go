@@ -1,8 +1,9 @@
-package logger
+package slogger
 
 import (
 	"context"
 	"log/slog"
+	"os"
 )
 
 const (
@@ -36,13 +37,16 @@ func NewHandlerOptions(handler *slog.HandlerOptions) *HandlerOptions {
 
 	ret := &HandlerOptions{HandlerOptions: handler}
 
-	existingFunc := &handler.ReplaceAttr
-	handler.ReplaceAttr = NewReplaceAttr(ret, existingFunc)
+	if handler.ReplaceAttr != nil {
+		handler.ReplaceAttr = NewReplaceAttr(ret, handler.ReplaceAttr)
+	} else {
+		handler.ReplaceAttr = NewReplaceAttr(ret, func(groups []string, a slog.Attr) slog.Attr { return a })
+	}
 
 	return ret
 }
 
-func NewReplaceAttr(handler *HandlerOptions, existingFunc *func(groups []string, a slog.Attr) slog.Attr) func(groups []string, a slog.Attr) slog.Attr {
+func NewReplaceAttr(handler *HandlerOptions, callback func(groups []string, a slog.Attr) slog.Attr) func(groups []string, a slog.Attr) slog.Attr {
 	return func(groups []string, a slog.Attr) slog.Attr {
 		switch a.Key {
 		case slog.LevelKey:
@@ -58,11 +62,7 @@ func NewReplaceAttr(handler *HandlerOptions, existingFunc *func(groups []string,
 			}
 		}
 
-		if existingFunc != nil {
-			return (*existingFunc)(groups, a)
-		} else {
-			return a
-		}
+		return callback(groups, a)
 	}
 }
 
@@ -77,6 +77,7 @@ func (l *Logger) Trace(msg string, fields ...any) {
 
 func (l *Logger) Fatal(msg string, fields ...any) {
 	l.Log(context.Background(), LevelFatal, msg, fields...)
+	os.Exit(1)
 }
 
 func (l *Logger) Panic(msg string, fields ...any) {

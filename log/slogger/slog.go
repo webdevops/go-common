@@ -2,8 +2,11 @@ package slogger
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 const (
@@ -26,7 +29,10 @@ type (
 
 	HandlerOptions struct {
 		*slog.HandlerOptions
-		ShowTime bool
+		ShowTime          bool
+		ShortenSourcePath bool
+
+		sourceRelPath string
 	}
 )
 
@@ -36,6 +42,9 @@ func NewHandlerOptions(handler *slog.HandlerOptions) *HandlerOptions {
 	}
 
 	ret := &HandlerOptions{HandlerOptions: handler}
+	if val, err := os.Executable(); err == nil {
+		ret.sourceRelPath = strings.TrimRight(filepath.Dir(val), "/") + "/"
+	}
 
 	if handler.ReplaceAttr != nil {
 		handler.ReplaceAttr = NewReplaceAttr(ret, handler.ReplaceAttr)
@@ -59,6 +68,21 @@ func NewReplaceAttr(handler *HandlerOptions, callback func(groups []string, a sl
 		case slog.TimeKey:
 			if !handler.ShowTime {
 				return slog.Attr{}
+			}
+		case slog.SourceKey:
+			if handler.ShortenSourcePath {
+				if src, ok := a.Value.Any().(*slog.Source); ok {
+					shortPath := ""
+					if v, ok := strings.CutPrefix(src.File, handler.sourceRelPath); ok {
+						shortPath = v
+					} else {
+						fullPath := src.File
+						seps := strings.Split(fullPath, "/")
+						shortPath += seps[len(seps)-1]
+					}
+					shortPath += fmt.Sprintf(":%d", src.Line)
+					a.Value = slog.StringValue(shortPath)
+				}
 			}
 		}
 

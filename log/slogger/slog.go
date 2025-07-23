@@ -5,21 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 )
 
 const (
 	LevelTrace = slog.Level(-8)
 	LevelFatal = slog.Level(12)
 	LevelPanic = slog.Level(255)
-)
-
-var (
-	levelNames = map[slog.Leveler]string{
-		LevelTrace: "TRACE",
-		LevelFatal: "FATAL",
-	}
 )
 
 type (
@@ -29,10 +23,23 @@ type (
 
 	HandlerOptions struct {
 		*slog.HandlerOptions
-		ShowTime          bool
-		ShortenSourcePath bool
+		ShowTime   bool
+		SourceMode SourceMode
+	}
 
-		sourceRelPath string
+	SourceMode string
+)
+
+const (
+	SourceModeFile  SourceMode = "file"
+	SourceModeShort SourceMode = "short"
+	SourceModeFull  SourceMode = "full"
+)
+
+var (
+	levelNames = map[slog.Leveler]string{
+		LevelTrace: "TRACE",
+		LevelFatal: "FATAL",
 	}
 )
 
@@ -42,9 +49,6 @@ func NewHandlerOptions(handler *slog.HandlerOptions) *HandlerOptions {
 	}
 
 	ret := &HandlerOptions{HandlerOptions: handler}
-	if val, err := os.Executable(); err == nil {
-		ret.sourceRelPath = strings.TrimRight(filepath.Dir(val), "/") + "/"
-	}
 
 	if handler.ReplaceAttr != nil {
 		handler.ReplaceAttr = NewReplaceAttr(ret, handler.ReplaceAttr)
@@ -70,18 +74,17 @@ func NewReplaceAttr(handler *HandlerOptions, callback func(groups []string, a sl
 				return slog.Attr{}
 			}
 		case slog.SourceKey:
-			if handler.ShortenSourcePath {
+			switch handler.SourceMode {
+			case SourceModeFile:
 				if src, ok := a.Value.Any().(*slog.Source); ok {
-					shortPath := ""
-					if v, ok := strings.CutPrefix(src.File, handler.sourceRelPath); ok {
-						shortPath = v
-					} else {
-						fullPath := src.File
-						seps := strings.Split(fullPath, "/")
-						shortPath += seps[len(seps)-1]
-					}
-					shortPath += fmt.Sprintf(":%d", src.Line)
-					a.Value = slog.StringValue(shortPath)
+					a.Value = slog.StringValue(fmt.Sprintf("%s:%d", src.File, src.Line))
+				}
+			case SourceModeShort:
+				if src, ok := a.Value.Any().(*slog.Source); ok {
+					fullPath := src.File
+					seps := strings.Split(fullPath, "/")
+					shortPath := seps[len(seps)-1]
+					a.Value = slog.StringValue(fmt.Sprintf("%s:%d", shortPath, src.Line))
 				}
 			}
 		}
@@ -95,17 +98,40 @@ func New(handler slog.Handler) *Logger {
 		Logger: slog.New(handler),
 	}
 }
+
 func (l *Logger) Trace(msg string, fields ...any) {
-	l.Log(context.Background(), LevelTrace, msg, fields...)
+	if !l.Enabled(context.Background(), LevelTrace) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelTrace, msg, pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
 }
 
 func (l *Logger) Fatal(msg string, fields ...any) {
-	l.Log(context.Background(), LevelFatal, msg, fields...)
+	if !l.Enabled(context.Background(), LevelFatal) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Fatal]
+	r := slog.NewRecord(time.Now(), LevelFatal, msg, pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+
 	os.Exit(1)
 }
 
 func (l *Logger) Panic(msg string, fields ...any) {
-	l.Log(context.Background(), LevelPanic, msg, fields...)
+	if !l.Enabled(context.Background(), LevelPanic) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Panic]
+	r := slog.NewRecord(time.Now(), LevelPanic, msg, pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
 	panic(msg)
 }
 

@@ -1,0 +1,119 @@
+package slogger
+
+import (
+	"fmt"
+	"io"
+	"log/slog"
+	"strings"
+)
+
+type LoggerOptionFunc func(*Options)
+
+func WithLevelText(val string) LoggerOptionFunc {
+	var level slog.Level
+
+	strings.Contains(val, "%")
+	switch strings.ToLower(val) {
+	case "trace":
+		level = LevelTrace
+	case "debug":
+		level = LevelDebug
+	case "info":
+		level = LevelInfo
+	case "warn":
+		level = LevelWarn
+	case "error":
+		level = LevelError
+	case "fatal":
+		level = LevelFatal
+	case "panic":
+		level = LevelPanic
+	}
+
+	return func(opt *Options) {
+		opt.Level = level
+	}
+}
+
+func WithLevel(level slog.Level) LoggerOptionFunc {
+	return func(opt *Options) {
+		opt.Level = level
+	}
+}
+
+func WithSourceMode(mode SourceMode) LoggerOptionFunc {
+	switch mode {
+	case "":
+		mode = SourceModeNone
+	case SourceModeNone:
+	case SourceModeFile:
+	case SourceModeShort:
+	case SourceModeFull:
+	default:
+		panic(fmt.Errorf(`unknown source mode "%s"`, mode))
+	}
+
+	return func(opt *Options) {
+		opt.SourceMode = mode
+		if mode != SourceModeNone {
+			opt.HandlerOptions.AddSource = true
+		}
+	}
+}
+
+func WithFormat(mode FormatMode) LoggerOptionFunc {
+	switch mode {
+	case "":
+		mode = FormatModeText
+	case FormatModeText:
+	case FormatModeJSON:
+	default:
+		panic(fmt.Errorf(`unknown format mode "%s"`, mode))
+	}
+
+	return func(opt *Options) {
+		opt.Format = mode
+	}
+}
+
+func WithTime(v bool) LoggerOptionFunc {
+	return func(opt *Options) {
+		opt.ShowTime = v
+	}
+}
+
+func NewDaemonLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
+	loggerOptions := NewOptions(nil).
+		SetLevel(LevelInfo).
+		SetSourceMode(SourceModeFile).
+		SetFormat(FormatModeText)
+
+	return newLoggerHandler(w, loggerOptions, opts...)
+}
+
+func NewCliLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
+	loggerOptions := NewOptions(nil).
+		SetLevel(LevelInfo).
+		SetSourceMode(SourceModeNone).
+		SetFormat(FormatModeText).
+		SetShowTime(false)
+
+	return newLoggerHandler(w, loggerOptions, opts...)
+}
+
+func newLoggerHandler(w io.Writer, handlerOpts *Options, opts ...LoggerOptionFunc) *Logger {
+	var handler slog.Handler
+	for _, opt := range opts {
+		opt(handlerOpts)
+	}
+
+	switch handlerOpts.Format {
+	case FormatModeJSON:
+		handler = slog.NewJSONHandler(w, handlerOpts.HandlerOptions)
+	default:
+		handler = slog.NewTextHandler(w, handlerOpts.HandlerOptions)
+	}
+
+	logger := New(handler)
+	return logger
+}

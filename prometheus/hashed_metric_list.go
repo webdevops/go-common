@@ -3,6 +3,8 @@ package prometheus
 import (
 	"crypto/sha256"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 
@@ -80,8 +82,8 @@ func (m *HashedMetricList) Inc(labels prometheus.Labels) {
 	defer m.mux.Unlock()
 
 	metricKey := ""
-	for key, value := range labels {
-		metricKey = metricKey + key + "=" + value + ";"
+	for _, key := range slices.Sorted(maps.Keys(labels)) {
+		metricKey = metricKey + key + "=" + labels[key] + ";"
 	}
 	hashKey := fmt.Sprintf("%x", sha256.Sum256([]byte(metricKey)))
 	if _, exists := m.List[hashKey]; exists {

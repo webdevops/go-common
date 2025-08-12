@@ -37,8 +37,8 @@ const (
 
 	ColorError   = 1
 	ColorWarning = 3
-	ColorInfo    = 2
-	ColorDebug   = 5
+	ColorInfo    = 6
+	ColorDebug   = 7
 )
 
 type (

@@ -12,7 +12,7 @@ type (
 		SourceMode SourceMode
 		Format     FormatMode
 		ShowTime   bool
-		// Color      bool
+		Color      bool
 	}
 )
 
@@ -47,10 +47,10 @@ func (o *Options) SetShowTime(mode bool) *Options {
 	return o
 }
 
-// func (o *Options) SetColor(mode bool) *Options {
-// 	o.Color = mode
-// 	return o
-// }
+func (o *Options) SetColor(mode bool) *Options {
+	o.Color = mode
+	return o
+}
 
 func NewReplaceAttr(opts *Options, callback func(groups []string, a slog.Attr) slog.Attr) func(groups []string, a slog.Attr) slog.Attr {
 	return func(groups []string, a slog.Attr) slog.Attr {

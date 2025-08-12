@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"strings"
+
+	"github.com/lmittmann/tint"
+	isatty "github.com/mattn/go-isatty"
 )
 
 type LoggerOptionFunc func(*Options)
@@ -64,8 +68,8 @@ func WithSourceMode(mode SourceMode) LoggerOptionFunc {
 func WithFormat(mode FormatMode) LoggerOptionFunc {
 	switch mode {
 	case "":
-		mode = FormatModeText
-	case FormatModeText:
+		mode = FormatModeLogfmt
+	case FormatModeLogfmt:
 	case FormatModeJSON:
 	default:
 		panic(fmt.Errorf(`unknown format mode "%s"`, mode))
@@ -86,7 +90,7 @@ func NewDaemonLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 	loggerOptions := NewOptions(nil).
 		SetLevel(LevelInfo).
 		SetSourceMode(SourceModeFile).
-		SetFormat(FormatModeText)
+		SetFormat(FormatModeLogfmt)
 
 	return newLoggerHandler(w, loggerOptions, opts...)
 }
@@ -95,8 +99,9 @@ func NewCliLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 	loggerOptions := NewOptions(nil).
 		SetLevel(LevelInfo).
 		SetSourceMode(SourceModeNone).
-		SetFormat(FormatModeText).
-		SetShowTime(false)
+		SetFormat(FormatModeLogfmt).
+		SetShowTime(false).
+		SetColor(isatty.IsTerminal(os.Stdout.Fd()))
 
 	return newLoggerHandler(w, loggerOptions, opts...)
 }
@@ -111,7 +116,21 @@ func newLoggerHandler(w io.Writer, handlerOpts *Options, opts ...LoggerOptionFun
 	case FormatModeJSON:
 		handler = slog.NewJSONHandler(w, handlerOpts.HandlerOptions)
 	default:
-		handler = slog.NewTextHandler(w, handlerOpts.HandlerOptions)
+		if handlerOpts.Color {
+			tintOpts := tint.Options{
+				ReplaceAttr: handlerOpts.ReplaceAttr,
+				Level:       handlerOpts.Level,
+				AddSource:   handlerOpts.SourceMode != SourceModeNone,
+			}
+
+			if !handlerOpts.ShowTime {
+				tintOpts.TimeFormat = ""
+			}
+
+			handler = tint.NewHandler(w, &tintOpts)
+		} else {
+			handler = slog.NewTextHandler(w, handlerOpts.HandlerOptions)
+		}
 	}
 
 	logger := New(handler)

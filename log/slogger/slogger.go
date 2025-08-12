@@ -14,8 +14,8 @@ type (
 )
 
 const (
-	FormatModeText FormatMode = "text"
-	FormatModeJSON FormatMode = "json"
+	FormatModeLogfmt FormatMode = "logfmt"
+	FormatModeJSON   FormatMode = "json"
 
 	SourceModeNone  SourceMode = "none"
 	SourceModeShort SourceMode = "short"

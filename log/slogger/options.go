@@ -3,7 +3,11 @@ package slogger
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
+
+	"github.com/lmittmann/tint"
+	isatty "github.com/mattn/go-isatty"
 )
 
 type (
@@ -47,8 +51,15 @@ func (o *Options) SetShowTime(mode bool) *Options {
 	return o
 }
 
-func (o *Options) SetColor(mode bool) *Options {
-	o.Color = mode
+func (o *Options) SetColorMode(mode ColorMode) *Options {
+	o.Color = false
+
+	switch strings.ToLower(string(mode)) {
+	case "", "auto":
+		o.Color = isatty.IsTerminal(os.Stderr.Fd())
+	case "1", "y", "yes", "true", "enable", "enabled", "on":
+		o.Color = true
+	}
 	return o
 }
 
@@ -60,6 +71,10 @@ func NewReplaceAttr(opts *Options, callback func(groups []string, a slog.Attr) s
 			level := a.Value.Any().(slog.Level)
 			if l, exists := levelNames[level]; exists {
 				a.Value = slog.StringValue(l.text)
+
+				if opts.Color && l.color > 0 {
+					a = tint.Attr(l.color, a)
+				}
 			} else {
 				a.Value = slog.StringValue(level.String())
 			}
@@ -82,6 +97,13 @@ func NewReplaceAttr(opts *Options, callback func(groups []string, a slog.Attr) s
 					shortPath := seps[len(seps)-1]
 					a.Value = slog.StringValue(fmt.Sprintf("%s:%d", shortPath, src.Line))
 				}
+			}
+		}
+
+		if opts.Color {
+			// if val is error, color it
+			if _, isErr := a.Value.Any().(error); isErr {
+				a = tint.Attr(ColorError, a)
 			}
 		}
 

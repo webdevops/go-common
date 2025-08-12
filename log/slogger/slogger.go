@@ -11,6 +11,7 @@ import (
 type (
 	FormatMode string
 	SourceMode string
+	ColorMode  string
 )
 
 const (
@@ -22,6 +23,10 @@ const (
 	SourceModeFile  SourceMode = "file"
 	SourceModeFull  SourceMode = "full"
 
+	ColorModeDisabled ColorMode = "disabled"
+	ColorModeEnabled  ColorMode = "enabled"
+	ColorModeAuto     ColorMode = "auto"
+
 	LevelTrace = slog.Level(-8)
 	LevelDebug = slog.LevelDebug
 	LevelInfo  = slog.LevelInfo
@@ -29,6 +34,11 @@ const (
 	LevelError = slog.LevelError
 	LevelFatal = slog.Level(12)
 	LevelPanic = slog.Level(255)
+
+	ColorError   = 1
+	ColorWarning = 3
+	ColorInfo    = 2
+	ColorDebug   = 5
 )
 
 type (
@@ -37,19 +47,20 @@ type (
 	}
 
 	logLevel struct {
-		text string
+		text  string
+		color uint8
 	}
 )
 
 var (
 	levelNames = map[slog.Leveler]logLevel{
-		LevelTrace: {text: "TRACE"},
-		LevelDebug: {text: "DEBUG"},
-		LevelInfo:  {text: "INFO"},
-		LevelWarn:  {text: "WARN"},
-		LevelError: {text: "ERROR"},
-		LevelFatal: {text: "FATAL"},
-		LevelPanic: {text: "PANIC"},
+		LevelTrace: {text: "TRACE", color: ColorDebug},
+		LevelDebug: {text: "DEBUG", color: ColorDebug},
+		LevelInfo:  {text: "INFO", color: ColorInfo},
+		LevelWarn:  {text: "WARN", color: ColorWarning},
+		LevelError: {text: "ERROR", color: ColorError},
+		LevelFatal: {text: "FATAL", color: ColorError},
+		LevelPanic: {text: "PANIC", color: ColorError},
 	}
 )
 

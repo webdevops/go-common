@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/lmittmann/tint"
-	isatty "github.com/mattn/go-isatty"
 )
 
 type LoggerOptionFunc func(*Options)
@@ -60,7 +58,7 @@ func WithSourceMode(mode SourceMode) LoggerOptionFunc {
 	return func(opt *Options) {
 		opt.SourceMode = mode
 		if mode != SourceModeNone {
-			opt.HandlerOptions.AddSource = true
+			opt.AddSource = true
 		}
 	}
 }
@@ -77,6 +75,12 @@ func WithFormat(mode FormatMode) LoggerOptionFunc {
 
 	return func(opt *Options) {
 		opt.Format = mode
+	}
+}
+
+func WithColor(mode ColorMode) LoggerOptionFunc {
+	return func(opt *Options) {
+		opt.SetColorMode(mode)
 	}
 }
 
@@ -101,7 +105,7 @@ func NewCliLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 		SetSourceMode(SourceModeNone).
 		SetFormat(FormatModeLogfmt).
 		SetShowTime(false).
-		SetColor(isatty.IsTerminal(os.Stdout.Fd()))
+		SetColorMode(ColorModeAuto)
 
 	return newLoggerHandler(w, loggerOptions, opts...)
 }
@@ -121,6 +125,7 @@ func newLoggerHandler(w io.Writer, handlerOpts *Options, opts ...LoggerOptionFun
 				ReplaceAttr: handlerOpts.ReplaceAttr,
 				Level:       handlerOpts.Level,
 				AddSource:   handlerOpts.SourceMode != SourceModeNone,
+				NoColor:     false,
 			}
 
 			if !handlerOpts.ShowTime {

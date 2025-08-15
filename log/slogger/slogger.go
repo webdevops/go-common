@@ -78,6 +78,7 @@ func (l *Logger) Trace(msg string, fields ...any) {
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
 	r := slog.NewRecord(time.Now(), LevelTrace, msg, pcs[0])
+	r.Add(fields...)
 	_ = l.Handler().Handle(context.Background(), r)
 }
 
@@ -89,6 +90,7 @@ func (l *Logger) Fatal(msg string, fields ...any) {
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:]) // skip [Callers, Fatal]
 	r := slog.NewRecord(time.Now(), LevelFatal, msg, pcs[0])
+	r.Add(fields...)
 	_ = l.Handler().Handle(context.Background(), r)
 
 	os.Exit(1)
@@ -102,6 +104,7 @@ func (l *Logger) Panic(msg string, fields ...any) {
 	var pcs [1]uintptr
 	runtime.Callers(2, pcs[:]) // skip [Callers, Panic]
 	r := slog.NewRecord(time.Now(), LevelPanic, msg, pcs[0])
+	r.Add(fields...)
 	_ = l.Handler().Handle(context.Background(), r)
 	panic(msg)
 }

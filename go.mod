@@ -2,7 +2,7 @@ module github.com/webdevops/go-common
 
 go 1.24.0
 
-toolchain go1.24.2
+toolchain go1.25.1
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1

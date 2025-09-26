@@ -14,25 +14,25 @@ func Test_HashedMetricsList(t *testing.T) {
 
 func hashedMetricsListGenerateMetrics(t *testing.T, m *HashedMetricList) {
 	expectHashedListCount(t, m, 0)
-	m.Inc(prometheus.Labels{"key": "info"})
+	m.Inc(prometheus.Labels{"key": "info", "foo": "bar"})
 	expectHashedListCount(t, m, 1)
 
-	m.Inc(prometheus.Labels{"key": "info"})
+	m.Inc(prometheus.Labels{"key": "info", "foo": "bar"})
 	expectHashedListCount(t, m, 1)
 
-	m.Inc(prometheus.Labels{"key": "test"})
+	m.Inc(prometheus.Labels{"key": "test", "foo": "bar"})
 	expectHashedListCount(t, m, 2)
 
-	m.Inc(prometheus.Labels{"key": "info"})
+	m.Inc(prometheus.Labels{"key": "info", "foo": "bar"})
 	expectHashedListCount(t, m, 2)
 
-	m.Inc(prometheus.Labels{"key": "test"})
+	m.Inc(prometheus.Labels{"key": "test", "foo": "bar"})
 	expectHashedListCount(t, m, 2)
 
-	m.Inc(prometheus.Labels{"key": "test2"})
+	m.Inc(prometheus.Labels{"key": "test2", "foo": "bar"})
 	expectHashedListCount(t, m, 3)
 
-	m.Inc(prometheus.Labels{"key": "info"})
+	m.Inc(prometheus.Labels{"key": "info", "foo": "bar"})
 	expectHashedListCount(t, m, 3)
 }
 

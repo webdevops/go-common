@@ -8,16 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c
-        with:
-          swap-size-gb: 12
+      - name: Setup runner
+        uses: ./.github/actions/setup-runner
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache-dependency-path: "go.sum"
-          check-latest: true
+      - name: Setup go
+        uses: ./.github/actions/setup-go
 
       - name: Run Golangci lint
         uses: golangci/golangci-lint-action@v7

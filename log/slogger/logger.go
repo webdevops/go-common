@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 
 	"github.com/lmittmann/tint"
 )
@@ -12,24 +11,9 @@ import (
 type LoggerOptionFunc func(*Options)
 
 func WithLevelText(val string) LoggerOptionFunc {
-	var level slog.Level
-
-	strings.Contains(val, "%")
-	switch strings.ToLower(val) {
-	case "trace":
-		level = LevelTrace
-	case "debug":
-		level = LevelDebug
-	case "info":
-		level = LevelInfo
-	case "warn":
-		level = LevelWarn
-	case "error":
-		level = LevelError
-	case "fatal":
-		level = LevelFatal
-	case "panic":
-		level = LevelPanic
+	level, err := TranslateToLogLevel(val)
+	if err != nil {
+		panic(err)
 	}
 
 	return func(opt *Options) {

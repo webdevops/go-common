@@ -2,6 +2,8 @@ package slogger
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"runtime"
@@ -70,6 +72,87 @@ func New(handler slog.Handler) *Logger {
 	}
 }
 
+func (l *Logger) Tracef(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelTrace) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelTrace, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+}
+
+func (l *Logger) Debugf(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelDebug) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelDebug, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+}
+
+func (l *Logger) Infof(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelInfo) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelInfo, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+}
+
+func (l *Logger) Warnf(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelWarn) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelWarn, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+}
+
+func (l *Logger) Errorf(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelError) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelError, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+}
+
+func (l *Logger) Fatalf(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelFatal) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelFatal, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+
+	os.Exit(1)
+}
+
+func (l *Logger) Panicf(format string, v ...any) {
+	if !l.Enabled(context.Background(), LevelPanic) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip [Callers, Trace]
+	r := slog.NewRecord(time.Now(), LevelPanic, fmt.Sprintf(format, v...), pcs[0])
+	_ = l.Handler().Handle(context.Background(), r)
+
+	panic(fmt.Sprintf(format, v...))
+}
+
 func (l *Logger) Trace(msg string, fields ...any) {
 	if !l.Enabled(context.Background(), LevelTrace) {
 		return
@@ -119,4 +202,8 @@ func (l *Logger) WithGroup(name string) *Logger {
 
 func (l *Logger) Slog() *slog.Logger {
 	return l.Logger
+}
+
+func (l *Logger) AsLog(level slog.Level) *log.Logger {
+	return slog.NewLogLogger(l.Handler(), level)
 }

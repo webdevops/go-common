@@ -336,7 +336,7 @@ func (c *Collector) run() {
 	c.logger.With(
 		slog.Float64("duration", c.lastScrapeDuration.Seconds()),
 		slog.Time("nextRun", c.nextScrapeTime.UTC()),
-	).Info("finished metrics collection", slog.Duration("duration", *c.sleepTime))
+	).Info("finished metrics collection")
 }
 
 // collectRun starts collector run and handles panics

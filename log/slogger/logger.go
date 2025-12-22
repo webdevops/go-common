@@ -10,6 +10,7 @@ import (
 
 type LoggerOptionFunc func(*Options)
 
+// WithLevelText sets the log level as string
 func WithLevelText(val string) LoggerOptionFunc {
 	level, err := TranslateToLogLevel(val)
 	if err != nil {
@@ -21,12 +22,14 @@ func WithLevelText(val string) LoggerOptionFunc {
 	}
 }
 
+// WithLevel sets the log level as slog.Level
 func WithLevel(level slog.Level) LoggerOptionFunc {
 	return func(opt *Options) {
 		opt.Level = level
 	}
 }
 
+// WithSourceMode sets the source (file, line) mode
 func WithSourceMode(mode SourceMode) LoggerOptionFunc {
 	switch mode {
 	case "":
@@ -47,6 +50,7 @@ func WithSourceMode(mode SourceMode) LoggerOptionFunc {
 	}
 }
 
+// WithFormat sets the mode (logfmt or json)
 func WithFormat(mode FormatMode) LoggerOptionFunc {
 	switch mode {
 	case "":
@@ -62,18 +66,32 @@ func WithFormat(mode FormatMode) LoggerOptionFunc {
 	}
 }
 
+// WithColor sets if logs should be colorful or not
 func WithColor(mode ColorMode) LoggerOptionFunc {
 	return func(opt *Options) {
 		opt.SetColorMode(mode)
 	}
 }
 
+// WithTime sets if logs lines should also include the time (not useful for containers)
 func WithTime(v bool) LoggerOptionFunc {
 	return func(opt *Options) {
 		opt.ShowTime = v
 	}
 }
 
+// NewFromSlog converts a slog.Logger to an slogger.Logger
+func NewFromSlog(logger *slog.Logger) *Logger {
+	return &Logger{logger}
+}
+
+// NewDiscardLogger creates a logger which discards all logs (send logs to /dev/null)
+func NewDiscardLogger() *Logger {
+	loggerOptions := NewOptions(nil)
+	return newLoggerHandler(io.Discard, loggerOptions)
+}
+
+// NewDaemonLogger creates a logger with defaults for daemons
 func NewDaemonLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 	loggerOptions := NewOptions(nil).
 		SetLevel(LevelInfo).
@@ -83,6 +101,7 @@ func NewDaemonLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 	return newLoggerHandler(w, loggerOptions, opts...)
 }
 
+// NewCliLogger creates a cli logger with defaults for cli tasks
 func NewCliLogger(w io.Writer, opts ...LoggerOptionFunc) *Logger {
 	loggerOptions := NewOptions(nil).
 		SetLevel(LevelInfo).

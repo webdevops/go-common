@@ -112,7 +112,7 @@ func (v *Version) SetAuthor(val string) *Version {
 func (v *Version) Title(tmpl *string) string {
 	var buf bytes.Buffer
 
-	if tmpl != nil {
+	if tmpl == nil {
 		tmp := DefaultTitle
 		tmpl = &tmp
 	}

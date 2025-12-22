@@ -133,7 +133,7 @@ func (v *Version) Title(tmpl *string) string {
 }
 
 func (v *Version) BuildVersionLine(tmpl *string) (ret string) {
-	if v == nil {
+	if tmpl == nil {
 		content, err := json.Marshal(v)
 		if err != nil {
 			panic(err)

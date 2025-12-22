@@ -22,13 +22,61 @@ type (
 
 const DefaultTitle = `{{.App}} v{{.Version}} ({{.GitCommit}}); {{.Go}}/{{.Arch}}; by {{.Author}}; built at {{.BuildDate}})`
 
-func New() *Version {
+func New(opts ...VersionOptionFunc) *Version {
 	ver := Version{
 		Go:   runtime.Version(),
 		Arch: runtime.GOARCH,
 	}
 
+	for _, opt := range opts {
+		opt(&ver)
+	}
+
 	return &ver
+}
+
+type VersionOptionFunc func(*Version)
+
+// WithApp sets the app
+func WithApp(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.App = val
+	}
+}
+
+// WithVersion sets the version
+func WithVersion(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.Version = val
+	}
+}
+
+// WithGitCommit sets the git commit
+func WithGitCommit(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.GitCommit = val
+	}
+}
+
+// WithGitTag sets the git tag
+func WithGitTag(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.GitTag = val
+	}
+}
+
+// WithBuildDate sets the build tage
+func WithBuildDate(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.BuildDate = val
+	}
+}
+
+// WithAuthor sets the author
+func WithAuthor(val string) VersionOptionFunc {
+	return func(ver *Version) {
+		ver.Author = val
+	}
 }
 
 func (v *Version) SetApp(val string) *Version {
@@ -53,6 +101,11 @@ func (v *Version) SetGitTag(val string) *Version {
 
 func (v *Version) SetBuildDate(val string) *Version {
 	v.GitTag = val
+	return v
+}
+
+func (v *Version) SetAuthor(val string) *Version {
+	v.Author = val
 	return v
 }
 

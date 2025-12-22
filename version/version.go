@@ -77,7 +77,7 @@ func (v *Version) SetApp(val string) *Version {
 }
 
 func (v *Version) SetVersion(val string) *Version {
-	v.GitCommit = val
+	v.Version = val
 	return v
 }
 
@@ -87,7 +87,7 @@ func (v *Version) SetGitCommit(val string) *Version {
 }
 
 func (v *Version) SetBuildDate(val string) *Version {
-	v.GitTag = val
+	v.BuildDate = val
 	return v
 }
 

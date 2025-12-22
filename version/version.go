@@ -13,14 +13,13 @@ type (
 		Author    string `json:"author"`
 		Version   string `json:"version"`
 		GitCommit string `json:"gitCommit"`
-		GitTag    string `json:"gitTag"`
 		BuildDate string `json:"buildDate"`
 		Go        string `json:"go"`
 		Arch      string `json:"arch"`
 	}
 )
 
-const DefaultTitle = `{{.App}} v{{.Version}} ({{.GitCommit}}); {{.Go}}/{{.Arch}}; by {{.Author}}; built at {{.BuildDate}})`
+const DefaultTitle = `{{.App}} {{.Version}} ({{.GitCommit}}; {{.Go}}/{{.Arch}}; by {{.Author}}; built at {{.BuildDate}})`
 
 func New(opts ...VersionOptionFunc) *Version {
 	ver := Version{
@@ -58,13 +57,6 @@ func WithGitCommit(val string) VersionOptionFunc {
 	}
 }
 
-// WithGitTag sets the git tag
-func WithGitTag(val string) VersionOptionFunc {
-	return func(ver *Version) {
-		ver.GitTag = val
-	}
-}
-
 // WithBuildDate sets the build tage
 func WithBuildDate(val string) VersionOptionFunc {
 	return func(ver *Version) {
@@ -91,11 +83,6 @@ func (v *Version) SetVersion(val string) *Version {
 
 func (v *Version) SetGitCommit(val string) *Version {
 	v.GitCommit = val
-	return v
-}
-
-func (v *Version) SetGitTag(val string) *Version {
-	v.GitTag = val
 	return v
 }
 

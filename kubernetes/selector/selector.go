@@ -12,14 +12,14 @@ const (
 )
 
 type (
-	KubernetesSelector struct {
+	LabelSelector struct {
 		metav1.LabelSelector `json:",inline"`
 		selector             *string
 	}
 )
 
 // IsEmpty checks if the selector is empty/defined or not
-func (selector *KubernetesSelector) IsEmpty() bool {
+func (selector *LabelSelector) IsEmpty() bool {
 	if selector == nil || (len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0) {
 		return true
 	}
@@ -28,7 +28,7 @@ func (selector *KubernetesSelector) IsEmpty() bool {
 }
 
 // Compile compiles the label selector struct to a string
-func (selector *KubernetesSelector) Compile() (string, error) {
+func (selector *LabelSelector) Compile() (string, error) {
 	// no selector
 	if selector.IsEmpty() {
 		return "", nil

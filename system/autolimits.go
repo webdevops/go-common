@@ -3,6 +3,7 @@ package system
 import (
 	"log/slog"
 	"runtime"
+	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	humanize "github.com/dustin/go-humanize"
@@ -27,6 +28,7 @@ func AutoProcMemLimit(logger *slog.Logger) {
 			),
 		),
 		memlimit.WithLogger(logger),
+		memlimit.WithRefreshInterval(1*time.Minute),
 	)
 	if err != nil {
 		logger.Error(`failed to set GOMEMLIMIT`, "error", err)

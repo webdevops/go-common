@@ -37,7 +37,7 @@ type (
 )
 
 // NewMsGraphClientFromEnvironment creates new MS Graph client from environment settings
-func NewMsGraphClientFromEnvironment(logger *slog.Logger) (*MsGraphClient, error) {
+func NewMsGraphClientFromEnvironment(logger *slog.Logger, opts ...ClientOptionFunc) (*MsGraphClient, error) {
 	var azureEnvironment, azureTenant string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -53,11 +53,11 @@ func NewMsGraphClientFromEnvironment(logger *slog.Logger) (*MsGraphClient, error
 		return nil, fmt.Errorf(`env var AZURE_TENANT_ID is not set`)
 	}
 
-	return NewMsGraphClientWithCloudName(azureEnvironment, azureTenant, logger)
+	return NewMsGraphClientWithCloudName(azureEnvironment, azureTenant, logger, opts...)
 }
 
 // NewMsGraphClient creates new MS Graph client
-func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *slog.Logger) *MsGraphClient {
+func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string, logger *slog.Logger, opts ...ClientOptionFunc) *MsGraphClient {
 	client := &MsGraphClient{}
 	client.cloud = cloudConfig
 	client.tenantID = tenantID
@@ -68,16 +68,20 @@ func NewMsGraphClient(cloudConfig cloudconfig.CloudEnvironment, tenantID string,
 	client.logger = logger
 	client.userAgent = "go-common/unknown"
 
+	for _, opt := range opts {
+		opt(client)
+	}
+
 	return client
 }
 
 // NewMsGraphClientWithCloudName creates new MS Graph client with environment name as string
-func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *slog.Logger) (*MsGraphClient, error) {
+func NewMsGraphClientWithCloudName(cloudName string, tenantID string, logger *slog.Logger, opts ...ClientOptionFunc) (*MsGraphClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
 		return nil, err
 	}
-	return NewMsGraphClient(cloudConfig, tenantID, logger), nil
+	return NewMsGraphClient(cloudConfig, tenantID, logger, opts...), nil
 }
 
 // ServiceClient returns msgraph service client

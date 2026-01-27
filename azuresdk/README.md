@@ -6,6 +6,7 @@
 
 | Variable name                                      | Default               | Description                                                                                                                                                                                                                           |
 |----------------------------------------------------|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `AZURE_AUTH_METHOD` (or `AZURE_AUTH`)              | none                  | Defines the force auth method, fallback is the default auth method from the azure-sdk-for-go                                                                                                                                          |
 | `AZURE_SERVICEDISCOVERY_CACHE_TTL`                 | `60m` (time.Duration) | ServiceDiscovery cache (eg. subscription, resourceGroup list,...)                                                                                                                                                                     |
 | `AZURE_SERVICEDISCOVERY_SUBSCRIPTION_ID`           |                       | Subscription IDs separated by commas or spaces (whitespaces are trimmed)                                                                                                                                                              |
 | `AZURE_SERVICEDISCOVERY_SUBSCRIPTION_TAG_SELECTOR` |                       | Tag selector `tagName=tagValue,tagName2=tagValue2` to filter subscriptions for ServiceDiscovery (uses [kubernetes label selector library](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)) |
@@ -32,8 +33,16 @@ Hint: please also check [microsoft azure-sdk documentation](https://docs.microso
 
 #### AzureCLI authentication
 
-To force authentication via AzureCLI set `AZURE_AUTH=az` and the token is fetched from Azure CLI.
+To force authentication via AzureCLI set `AZURE_AUTH_METHOD=az` and the token is fetched from Azure CLI.
 For this method the `az` binary must be executable in `$PATH` (inside the container/environment).
+
+#### Interactive browser authentication
+
+To force authentication via interactive browser set `AZURE_AUTH_METHOD=interactive`.
+
+#### Interactive devicetoken authentication
+
+To force authentication via device token set `AZURE_AUTH_METHOD=devicetoken`.
 
 #### WorkloadIdentity/Federation authentication
 

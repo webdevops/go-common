@@ -26,10 +26,19 @@ const (
 
 func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {
 	// azure authorizer
-	switch strings.ToLower(os.Getenv("AZURE_AUTH")) {
+	authMethod := strings.ToLower(os.Getenv("AZURE_AUTH_METHOD"))
+	if authMethod == "" {
+		authMethod = strings.ToLower(os.Getenv("AZURE_AUTH"))
+	}
+
+	switch authMethod {
 	case "az", "cli", "azcli":
 		// azurecli authentication
 		return NewAzCliCredential()
+	case "devicetoken":
+		return azidentity.NewDeviceCodeCredential(nil)
+	case "interactive", "browser", "interactivebrowser":
+		return azidentity.NewInteractiveBrowserCredential(nil)
 	case "wi", "workload", "workloadidentity", "federation":
 		var tokenFile, tenantID, clientID string
 		var ok bool

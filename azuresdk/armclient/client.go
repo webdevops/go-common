@@ -50,7 +50,7 @@ type (
 )
 
 // NewArmClientFromEnvironment creates new Azure SDK ARM client from environment settings
-func NewArmClientFromEnvironment(logger *slog.Logger) (*ArmClient, error) {
+func NewArmClientFromEnvironment(logger *slog.Logger, opts ...ClientOptionFunc) (*ArmClient, error) {
 	var azureEnvironment string
 
 	if azureEnvironment = os.Getenv("AZURE_ENVIRONMENT"); azureEnvironment == "" {
@@ -62,11 +62,11 @@ func NewArmClientFromEnvironment(logger *slog.Logger) (*ArmClient, error) {
 		}
 	}
 
-	return NewArmClientWithCloudName(azureEnvironment, logger)
+	return NewArmClientWithCloudName(azureEnvironment, logger, opts...)
 }
 
 // NewArmClient creates new Azure SDK ARM client
-func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *slog.Logger) *ArmClient {
+func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *slog.Logger, opts ...ClientOptionFunc) *ArmClient {
 	client := &ArmClient{}
 	client.cloud = cloudConfig
 
@@ -81,17 +81,21 @@ func NewArmClient(cloudConfig cloudconfig.CloudEnvironment, logger *slog.Logger)
 	client.initCache()
 	client.initServiceDiscovery()
 
+	for _, opt := range opts {
+		opt(client)
+	}
+
 	return client
 }
 
 // NewArmClientWithCloudName creates new Azure SDK ARM client with environment name as string
-func NewArmClientWithCloudName(cloudName string, logger *slog.Logger) (*ArmClient, error) {
+func NewArmClientWithCloudName(cloudName string, logger *slog.Logger, opts ...ClientOptionFunc) (*ArmClient, error) {
 	cloudConfig, err := cloudconfig.NewCloudConfig(cloudName)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewArmClient(cloudConfig, logger), nil
+	return NewArmClient(cloudConfig, logger, opts...), nil
 }
 
 // init cache

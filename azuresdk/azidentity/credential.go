@@ -35,6 +35,9 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 	case "az", "cli", "azcli":
 		// azurecli authentication
 		return NewAzCliCredential()
+	case "azcached", "clicached", "azclicached":
+		// azurecli authentication with token cache
+		return NewAzCliCachedCredential()
 	case "devicetoken":
 		return azidentity.NewDeviceCodeCredential(nil)
 	case "interactive", "browser", "interactivebrowser":

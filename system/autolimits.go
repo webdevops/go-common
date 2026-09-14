@@ -1,6 +1,7 @@
 package system
 
 import (
+	"context"
 	"log/slog"
 	"runtime"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
-func AutoProcMemLimit(logger *slog.Logger) {
+func AutoProcMemLimit(ctx context.Context, logger *slog.Logger) {
 	logger.Info(`detecting system resources`)
 
 	// set procs
@@ -20,7 +21,7 @@ func AutoProcMemLimit(logger *slog.Logger) {
 	}
 
 	// set memory limit
-	goMemLimit, err := memlimit.SetGoMemLimitWithOpts(
+	goMemLimit, err := memlimit.Set(
 		memlimit.WithProvider(
 			memlimit.ApplyFallback(
 				memlimit.FromCgroup,
@@ -28,7 +29,7 @@ func AutoProcMemLimit(logger *slog.Logger) {
 			),
 		),
 		memlimit.WithLogger(logger),
-		memlimit.WithRefreshInterval(1*time.Minute),
+		memlimit.WithRefreshInterval(ctx, 1*time.Minute),
 	)
 	if err != nil {
 		logger.Error(`failed to set GOMEMLIMIT`, "error", err)

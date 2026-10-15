@@ -17,7 +17,7 @@ func AutoProcMemLimit(ctx context.Context, logger *slog.Logger) {
 	// set procs
 	_, err := maxprocs.Set(maxprocs.Logger(logger.Debug))
 	if err != nil {
-		logger.Error(`failed to set GOMAXPROCS`, "error", err)
+		logger.Warn(`failed to set GOMAXPROCS`, "error", err)
 	}
 
 	// set memory limit
@@ -32,7 +32,7 @@ func AutoProcMemLimit(ctx context.Context, logger *slog.Logger) {
 		memlimit.WithRefreshInterval(ctx, 1*time.Minute),
 	)
 	if err != nil {
-		logger.Error(`failed to set GOMEMLIMIT`, "error", err)
+		logger.Warn(`failed to set GOMEMLIMIT`, "error", err)
 	}
 
 	goProcs := runtime.GOMAXPROCS(0)

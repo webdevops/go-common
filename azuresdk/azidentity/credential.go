@@ -26,18 +26,23 @@ const (
 
 func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCredential, error) {
 	// azure authorizer
-	authMethod := strings.ToLower(os.Getenv("AZURE_AUTH_METHOD"))
+	authMethod := os.Getenv("AZURE_AUTH_METHOD")
 	if authMethod == "" {
-		authMethod = strings.ToLower(os.Getenv("AZURE_AUTH"))
+		authMethod = os.Getenv("AZURE_AUTH")
 	}
+	authMethod = strings.TrimSpace(strings.ToLower(authMethod))
 
 	switch authMethod {
 	case "az", "cli", "azcli":
 		// azurecli authentication
 		return NewAzCliCredential()
-	case "azcached", "clicached", "azclicached":
+	case "azcached", "azcache", "clicached", "clicache", "azclicached", "azclicache":
 		// azurecli authentication with token cache
 		return NewAzCliCachedCredential()
+	case "pwsh", "powershell":
+		return NewAzPowershellCredential()
+	case "pwshcache", "pwshcached", "powershellcache", "powershellcached":
+		return NewAzPowershellCachedCredential()
 	case "devicetoken":
 		return azidentity.NewDeviceCodeCredential(nil)
 	case "interactive", "browser", "interactivebrowser":
@@ -72,7 +77,7 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 		}
 
 		return azidentity.NewWorkloadIdentityCredential(&opts)
-	default:
+	case "default", "auto", "":
 		// general azure authentication (env vars, service principal, msi, ...)
 		opts := azidentity.DefaultAzureCredentialOptions{}
 		if clientOptions != nil {
@@ -80,7 +85,10 @@ func NewAzDefaultCredential(clientOptions *azcore.ClientOptions) (azcore.TokenCr
 		}
 
 		return azidentity.NewDefaultAzureCredential(&opts)
+	default:
+		panic(fmt.Sprintf(`unsupported credential type "%s"`, authMethod))
 	}
+
 }
 
 func NewAzCliCredential() (azcore.TokenCredential, error) {
@@ -88,4 +96,11 @@ func NewAzCliCredential() (azcore.TokenCredential, error) {
 		AdditionallyAllowedTenants: []string{"*"},
 	}
 	return azidentity.NewAzureCLICredential(&opts)
+}
+
+func NewAzPowershellCredential() (azcore.TokenCredential, error) {
+	opts := azidentity.AzurePowerShellCredentialOptions{
+		AdditionallyAllowedTenants: []string{"*"},
+	}
+	return azidentity.NewAzurePowerShellCredential(&opts)
 }

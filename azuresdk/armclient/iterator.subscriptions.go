@@ -14,8 +14,8 @@ import (
 
 type (
 	SubscriptionsIterator struct {
-		client        *ArmClient
-		subscriptions *map[string]*armsubscriptions.Subscription
+		client          *ArmClient
+		subscriptionIDs []string
 
 		concurrency int
 	}
@@ -35,12 +35,12 @@ func NewSubscriptionIterator(client *ArmClient, subscriptionID ...string) *Subsc
 // SetSubscriptions Set subscription id filter
 func (i *SubscriptionsIterator) SetSubscriptions(subscriptionID ...string) *SubscriptionsIterator {
 	ctx := context.Background()
-	list, err := i.client.ListCachedSubscriptionsWithFilter(ctx, subscriptionID...)
+	_, err := i.client.ListCachedSubscriptionsWithFilter(ctx, subscriptionID...)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	i.subscriptions = &list
+	i.subscriptionIDs = append([]string(nil), subscriptionID...)
 	return i
 }
 
@@ -126,17 +126,5 @@ func (i *SubscriptionsIterator) ForEachAsync(logger *slog.Logger, callback func(
 
 // ListSubscriptions Returns list of subscriptions for looping
 func (i *SubscriptionsIterator) ListSubscriptions() (map[string]*armsubscriptions.Subscription, error) {
-	var list map[string]*armsubscriptions.Subscription
-
-	if i.subscriptions != nil {
-		list = *i.subscriptions
-	} else {
-		if result, err := i.client.ListCachedSubscriptions(context.Background()); err == nil {
-			list = result
-		} else {
-			return list, err
-		}
-	}
-
-	return list, nil
+	return i.client.ListCachedSubscriptionsWithFilter(context.Background(), i.subscriptionIDs...)
 }

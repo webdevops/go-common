@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
 	"k8s.io/apimachinery/pkg/labels"
@@ -13,6 +14,7 @@ import (
 
 const (
 	CacheIdentifierSubscriptions = "subscriptions"
+	emptySubscriptionsCacheTtl   = time.Minute
 )
 
 // ListCachedSubscriptionsWithFilter return list of subscription with filter by subscription ids
@@ -41,20 +43,18 @@ func (azureClient *ArmClient) ListCachedSubscriptionsWithFilter(ctx context.Cont
 
 // ListCachedSubscriptions return cached list of Azure Subscriptions as map (key is subscription id)
 func (azureClient *ArmClient) ListCachedSubscriptions(ctx context.Context) (map[string]*armsubscriptions.Subscription, error) {
-	result, err := azureClient.cacheData(CacheIdentifierSubscriptions, func() (interface{}, error) {
-		azureClient.logger.Debug("updating cached Azure Subscription list")
-		list, err := azureClient.ListSubscriptions(ctx)
-		if err != nil {
-			return nil, err
-		}
-		azureClient.logger.Debug(fmt.Sprintf("found %v Azure Subscriptions", len(list)))
-		return list, nil
-	})
+	if result, ok := azureClient.cache.Get(CacheIdentifierSubscriptions); ok {
+		return result.(map[string]*armsubscriptions.Subscription), nil
+	}
+
+	azureClient.logger.Debug("updating cached Azure Subscription list")
+	list, err := azureClient.ListSubscriptions(ctx)
 	if err != nil {
 		return nil, err
 	}
+	azureClient.logger.Debug(fmt.Sprintf("found %v Azure Subscriptions", len(list)))
 
-	return result.(map[string]*armsubscriptions.Subscription), nil
+	return list, nil
 }
 
 // ListSubscriptions return list of Azure Subscriptions as map (key is subscription id)
@@ -118,9 +118,18 @@ func (azureClient *ArmClient) ListSubscriptions(ctx context.Context) (map[string
 	}
 
 	// update cache
-	azureClient.cache.SetDefault(CacheIdentifierSubscriptions, list)
+	azureClient.cacheSubscriptions(list)
 
 	return list, nil
+}
+
+func (azureClient *ArmClient) cacheSubscriptions(list map[string]*armsubscriptions.Subscription) {
+	ttl := azureClient.cacheTtl
+	// Empty discovery can be transient; retry sooner without polling ARM on every call.
+	if len(list) == 0 && (ttl <= 0 || ttl > emptySubscriptionsCacheTtl) {
+		ttl = emptySubscriptionsCacheTtl
+	}
+	azureClient.cache.Set(CacheIdentifierSubscriptions, list, ttl)
 }
 
 // GetCachedSubscription returns a cached subscription
